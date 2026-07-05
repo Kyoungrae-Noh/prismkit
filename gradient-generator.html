@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSS Gradient Generator — Copy-Paste Gradient Code | Prism Kit</title>
+<meta name="description" content="Build a two-color linear gradient and copy the ready-to-use CSS code. Adjust the angle live and preview instantly. Free, no sign-up.">
+<link rel="canonical" href="https://prismkit.online/gradient-generator.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand"><div class="brand-mark"></div><div class="brand-name"><a href="index.html" style="color:var(--paper);">Prism Kit</a></div></div>
+  <nav class="site-nav">
+    <a href="index.html" class="active">Tools</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div class="tool-head">
+    <div class="eyebrow">Tool 03</div>
+    <h1>Gradient Generator</h1>
+    <p>Pick two colors and an angle, then copy the CSS gradient code straight into your project.</p>
+  </div>
+
+  <div class="card">
+    <div class="gradient-preview" id="gradientPreview"></div>
+    <div class="row">
+      <div class="col" style="max-width:110px;">
+        <label>Start</label>
+        <input type="color" id="gradStart" value="#FF6B4A">
+      </div>
+      <div class="col" style="max-width:110px;">
+        <label>End</label>
+        <input type="color" id="gradEnd" value="#5B6EE8">
+      </div>
+      <div class="col">
+        <label>Angle: <span id="gradAngleLabel">135°</span></label>
+        <input type="range" id="gradAngle" min="0" max="360" value="135">
+      </div>
+    </div>
+    <div class="code-box" id="gradCode"></div>
+  </div>
+
+  <div class="explainer">
+    <h2>Using this in your CSS</h2>
+    <p>Paste the generated line directly into any element's <code>background</code> property. The angle controls the direction of the gradient — 0° goes bottom to top, 90° goes left to right, 180° goes top to bottom, and so on. For buttons and hero sections, 120–150° tends to look the most natural.</p>
+
+    <div class="faq-item">
+      <div class="faq-q">Can I add a third color?</div>
+      <p class="faq-a">This tool builds a simple two-color gradient for speed. For a three-color gradient, take the generated code and add another color stop manually, e.g. <code>linear-gradient(135deg, #FF6B4A, #B85BD8, #5B6EE8)</code>.</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Will this work in every browser?</div>
+      <p class="faq-a">Yes — <code>linear-gradient()</code> is supported in all modern browsers without a vendor prefix.</p>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div>© 2026 Prism Kit. All tools run locally in your browser.</div>
+  <div><a href="about.html">About</a><a href="privacy.html">Privacy Policy</a><a href="contact.html">Contact</a></div>
+</footer>
+
+<script src="assets/app.js"></script>
+<script>
+const gradStart = document.getElementById('gradStart');
+const gradEnd = document.getElementById('gradEnd');
+const gradAngle = document.getElementById('gradAngle');
+const gradAngleLabel = document.getElementById('gradAngleLabel');
+const gradientPreview = document.getElementById('gradientPreview');
+const gradCode = document.getElementById('gradCode');
+
+function updateGradient(){
+  const s = gradStart.value, e = gradEnd.value, a = gradAngle.value;
+  gradAngleLabel.textContent = a+'°';
+  const css = `linear-gradient(${a}deg, ${s}, ${e})`;
+  gradientPreview.style.background = css;
+  gradCode.textContent = `background: ${css};`;
+  setAccent(s);
+}
+[gradStart, gradEnd, gradAngle].forEach(el=> el.addEventListener('input', updateGradient));
+gradCode.addEventListener('click', ()=> copyText(gradCode.textContent, gradCode));
+updateGradient();
+</script>
+</body>
+</html>

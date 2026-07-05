@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Color Extractor — Get a Palette From a Photo | Prism Kit</title>
+<meta name="description" content="Upload any image and extract its dominant colors as a ready-to-use palette. Processed entirely in your browser — nothing is uploaded to a server.">
+<link rel="canonical" href="https://prismkit.online/image-color-extractor.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand"><div class="brand-mark"></div><div class="brand-name"><a href="index.html" style="color:var(--paper);">Prism Kit</a></div></div>
+  <nav class="site-nav">
+    <a href="index.html" class="active">Tools</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div class="tool-head">
+    <div class="eyebrow">Tool 05</div>
+    <h1>Image Color Extractor</h1>
+    <p>Upload a photo and pull out its most common colors. Everything happens locally — your image is never sent anywhere.</p>
+  </div>
+
+  <div class="card">
+    <div class="drop-zone" id="dropZone">Click to choose an image (JPG / PNG)</div>
+    <input type="file" id="extractFile" accept="image/*" style="display:none;">
+    <canvas id="extractCanvas"></canvas>
+    <img id="extractPreviewImg" class="extract-preview">
+    <div class="palette-row" id="extractRow" style="display:none;"></div>
+  </div>
+
+  <div class="explainer">
+    <h2>What this is useful for</h2>
+    <p>Pulling colors directly from a photo is a fast way to build a palette that already looks cohesive — a sunset photo, a product shot, or a piece of art all carry color relationships that are hard to invent from scratch. Designers use this for moodboards; marketers use it to pick on-brand colors that match a campaign photo.</p>
+
+    <div class="faq-item">
+      <div class="faq-q">Is my photo uploaded anywhere?</div>
+      <p class="faq-a">No. The image is read directly in your browser using the Canvas API and never leaves your device.</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Why don't the extracted colors exactly match what I see in the photo?</div>
+      <p class="faq-a">Colors are grouped into buckets before counting, so very close shades are merged together. This avoids returning five near-identical colors and gives a more useful, distinct set instead.</p>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div>© 2026 Prism Kit. All tools run locally in your browser.</div>
+  <div><a href="about.html">About</a><a href="privacy.html">Privacy Policy</a><a href="contact.html">Contact</a></div>
+</footer>
+
+<script src="assets/app.js"></script>
+<script>
+const dropZone = document.getElementById('dropZone');
+const extractFile = document.getElementById('extractFile');
+const extractCanvas = document.getElementById('extractCanvas');
+const extractPreviewImg = document.getElementById('extractPreviewImg');
+const extractRow = document.getElementById('extractRow');
+
+dropZone.addEventListener('click', ()=> extractFile.click());
+extractFile.addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      extractPreviewImg.src = ev.target.result;
+      extractPreviewImg.style.display='block';
+      const ctx = extractCanvas.getContext('2d');
+      const w = extractCanvas.width = 80;
+      const h = extractCanvas.height = 80;
+      ctx.drawImage(img,0,0,w,h);
+      const data = ctx.getImageData(0,0,w,h).data;
+      const buckets = {};
+      for(let i=0;i<data.length;i+=4){
+        const r = Math.round(data[i]/32)*32;
+        const g = Math.round(data[i+1]/32)*32;
+        const b = Math.round(data[i+2]/32)*32;
+        const key = `${r},${g},${b}`;
+        buckets[key] = (buckets[key]||0)+1;
+      }
+      const sorted = Object.entries(buckets).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      extractRow.innerHTML='';
+      extractRow.style.display='flex';
+      sorted.forEach(([key])=>{
+        const [r,g,b] = key.split(',').map(Number);
+        const hex = rgbToHex(Math.min(r,255),Math.min(g,255),Math.min(b,255));
+        const chip = document.createElement('div');
+        chip.className='palette-chip';
+        chip.style.background = hex;
+        chip.innerHTML = `<span>${hex}</span>`;
+        chip.addEventListener('click', ()=>{ copyText(hex, chip); setAccent(hex); });
+        extractRow.appendChild(chip);
+      });
+      if(sorted[0]){
+        const [r,g,b] = sorted[0][0].split(',').map(Number);
+        setAccent(rgbToHex(Math.min(r,255),Math.min(g,255),Math.min(b,255)));
+      }
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Color Palette Generator — Analogous, Complementary & Triadic | Prism Kit</title>
+<meta name="description" content="Generate a matching color palette from one base color. Choose analogous, complementary, triadic, or shades schemes. Click any swatch to copy its HEX code.">
+<link rel="canonical" href="https://prismkit.online/palette-generator.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand"><div class="brand-mark"></div><div class="brand-name"><a href="index.html" style="color:var(--paper);">Prism Kit</a></div></div>
+  <nav class="site-nav">
+    <a href="index.html" class="active">Tools</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div class="tool-head">
+    <div class="eyebrow">Tool 02</div>
+    <h1>Palette Generator</h1>
+    <p>Pick one base color and generate a full palette around it. Click any swatch to copy its HEX code.</p>
+  </div>
+
+  <div class="card">
+    <div class="row" style="align-items:flex-end;">
+      <div class="col" style="max-width:120px;">
+        <label>Base color</label>
+        <input type="color" id="paletteInput" value="#5B6EE8">
+      </div>
+      <div class="col" style="max-width:180px;">
+        <label>Scheme</label>
+        <select id="paletteScheme">
+          <option value="analogous">Analogous</option>
+          <option value="complementary">Complementary</option>
+          <option value="triadic">Triadic</option>
+          <option value="shades">Shades</option>
+        </select>
+      </div>
+    </div>
+    <div class="palette-row" id="paletteRow"></div>
+  </div>
+
+  <div class="explainer">
+    <h2>How to use a color scheme</h2>
+    <p><strong>Analogous</strong> colors sit next to each other on the color wheel — they feel calm and cohesive, good for backgrounds or gentle UI. <strong>Complementary</strong> pulls the opposite hue — high contrast, good for a single accent against a neutral design. <strong>Triadic</strong> spreads three hues evenly around the wheel for a more playful, balanced look. <strong>Shades</strong> keeps the same hue and only changes lightness — useful for hover states, borders, or a monochrome UI.</p>
+
+    <div class="faq-item">
+      <div class="faq-q">Which scheme should I pick for a website?</div>
+      <p class="faq-a">Analogous or shades work well for most interfaces because they stay easy on the eyes. Save complementary or triadic for one accent color or a single call-to-action — using them everywhere can feel busy.</p>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Can I use these colors commercially?</div>
+      <p class="faq-a">Yes — colors themselves aren't copyrightable. You're free to use any palette generated here in personal or commercial projects.</p>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div>© 2026 Prism Kit. All tools run locally in your browser.</div>
+  <div><a href="about.html">About</a><a href="privacy.html">Privacy Policy</a><a href="contact.html">Contact</a></div>
+</footer>
+
+<script src="assets/app.js"></script>
+<script>
+const paletteInput = document.getElementById('paletteInput');
+const paletteScheme = document.getElementById('paletteScheme');
+const paletteRow = document.getElementById('paletteRow');
+
+function generatePalette(){
+  const hex = paletteInput.value;
+  const {r,g,b} = hexToRgb(hex);
+  const hsl = rgbToHsl(r,g,b);
+  const scheme = paletteScheme.value;
+  let hues = [];
+  if(scheme==='analogous') hues = [-40,-20,0,20,40];
+  else if(scheme==='complementary') hues = [0,0,180,180,180];
+  else if(scheme==='triadic') hues = [0,120,120,240,240];
+  else hues = [0,0,0,0,0];
+
+  paletteRow.innerHTML='';
+  hues.forEach((offset,i)=>{
+    let newH, newS, newL;
+    if(scheme==='shades'){
+      newH = hsl.h; newS = hsl.s;
+      const levels = [85,65,50,35,20];
+      newL = levels[i];
+    } else {
+      newH = (hsl.h + offset + 360) % 360;
+      newS = hsl.s; newL = hsl.l;
+    }
+    const {r:nr,g:ng,b:nb} = hslToRgb(newH,newS,newL);
+    const chipHex = rgbToHex(nr,ng,nb);
+    const chip = document.createElement('div');
+    chip.className='palette-chip';
+    chip.style.background = chipHex;
+    chip.innerHTML = `<span>${chipHex}</span>`;
+    chip.addEventListener('click', ()=>{ copyText(chipHex, chip); setAccent(chipHex); });
+    paletteRow.appendChild(chip);
+  });
+}
+paletteInput.addEventListener('input', generatePalette);
+paletteScheme.addEventListener('change', generatePalette);
+generatePalette();
+</script>
+</body>
+</html>
