@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSS Gradients Explained: linear, radial & conic | Prism Kit</title>
+<meta name="description" content="A practical guide to CSS gradients — the difference between linear, radial, and conic gradients, how angle and color stops work, and copy-paste examples for common UI patterns.">
+<link rel="canonical" href="https://prismkit.online/guides/css-gradient-guide.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="CSS Gradients Explained: linear, radial & conic | Prism Kit">
+<meta property="og:description" content="A practical guide to CSS gradients — the difference between linear, radial, and conic gradients, how angle and color stops work, and copy-paste examples for common UI patterns.">
+<meta property="og:url" content="https://prismkit.online/guides/css-gradient-guide.html">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-X3PB56KQB9"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-X3PB56KQB9');
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand"><div class="brand-mark"></div><div class="brand-name"><a href="../index.html" style="color:var(--paper);">Prism Kit</a></div></div>
+  <nav class="site-nav">
+    <a href="../index.html">Tools</a>
+    <a href="../about.html">About</a>
+    <a href="../contact.html">Contact</a>
+  </nav>
+</header>
+
+<div class="wrap legal">
+  <div class="tool-head">
+    <div class="eyebrow">Guide</div>
+    <h1>CSS Gradients: linear, radial, and conic</h1>
+    <p>What the <a href="../gradient-generator.html">Gradient Generator</a> builds, and the two gradient types it doesn't — with examples of when to reach for each.</p>
+  </div>
+
+  <h2>Linear gradients: the default choice</h2>
+  <p>A linear gradient blends colors along a straight line at a chosen angle. It's the gradient behind most buttons, hero banners, and card overlays because it reads as "one smooth surface" rather than drawing attention to itself.</p>
+  <div class="code-box" style="cursor:default;">background: linear-gradient(135deg, #FF6B4A, #5B6EE8);</div>
+  <p>The angle is measured clockwise from the top: 0deg points up, 90deg points right, 180deg points down. Most UI gradients land between 120deg and 160deg, which reads as a natural "light source from the upper left" without feeling directional or busy.</p>
+
+  <h2>Radial gradients: drawing the eye to a point</h2>
+  <p>A radial gradient spreads outward from a center point instead of a line. It's a good fit for spotlight effects, badges, or backgrounds where you want attention pulled toward the middle of an element rather than across it.</p>
+  <div class="code-box" style="cursor:default;">background: radial-gradient(circle at center, #FF6B4A, #15161B);</div>
+  <p>The <code>circle at center</code> part can be changed to <code>ellipse at top left</code> or similar to reposition and reshape the gradient — useful for glow effects positioned behind a specific UI element rather than centered on the whole container.</p>
+
+  <h2>Conic gradients: pie charts, wheels, and loaders</h2>
+  <p>A conic gradient rotates color around a center point rather than radiating outward. It's the shape behind color wheels, progress rings, and pie-chart-style visualizations.</p>
+  <div class="code-box" style="cursor:default;">background: conic-gradient(from 0deg, #FF6B4A, #5B6EE8, #FF6B4A);</div>
+  <p>Repeating the first color at the end (as above) avoids a hard seam where the gradient wraps back around to its starting angle.</p>
+
+  <h2>Color stops: controlling where a color starts and ends</h2>
+  <p>By default, colors in a gradient are spaced evenly. Adding a percentage after any color pins it to a specific point along the gradient:</p>
+  <div class="code-box" style="cursor:default;">background: linear-gradient(135deg, #FF6B4A 0%, #FF6B4A 40%, #5B6EE8 100%);</div>
+  <p>This holds the first color solid until 40% of the way through, then blends into the second color over the remaining 60% — useful for a gradient that should look mostly flat with just a hint of color shift at the edge.</p>
+
+  <h2>Building your own with the Gradient Generator</h2>
+  <p>The <a href="../gradient-generator.html">Gradient Generator</a> on this site builds two-color linear gradients with a live angle control, and gives you the exact CSS line to copy. For a three-color gradient or a radial/conic variant, generate the two-color base here, then edit the function name and add an extra color stop by hand using the patterns above.</p>
+</div>
+
+<footer class="site-footer">
+  <div>© 2026 Prism Kit. All tools run locally in your browser.</div>
+  <div><a href="../about.html">About</a><a href="../privacy.html">Privacy Policy</a><a href="../contact.html">Contact</a></div>
+</footer>
+
+</body>
+</html>
