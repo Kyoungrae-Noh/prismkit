@@ -6,9 +6,6 @@
 <title>Image Color Extractor — Get a Palette From a Photo | Prism Kit</title>
 <meta name="description" content="Upload any image and extract its dominant colors as a ready-to-use palette. Processed entirely in your browser — nothing is uploaded to a server.">
 <link rel="canonical" href="https://prismkit.online/image-color-extractor.html">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Image Color Extractor — Get a Palette From a Photo | Prism Kit">
 <meta property="og:description" content="Upload any image and extract its dominant colors as a ready-to-use palette. Processed entirely in your browser — nothing is uploaded to a server.">
@@ -16,6 +13,9 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Image Color Extractor — Get a Palette From a Photo | Prism Kit">
 <meta name="twitter:description" content="Upload any image and extract its dominant colors as a ready-to-use palette. Processed entirely in your browser — nothing is uploaded to a server.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -24,6 +24,18 @@
     {"@type":"Question","name":"Is my photo uploaded anywhere when I use the image color extractor?","acceptedAnswer":{"@type":"Answer","text":"No. The image is read directly in your browser using the Canvas API and never leaves your device."}},
     {"@type":"Question","name":"Why don't the extracted colors exactly match what I see in the photo?","acceptedAnswer":{"@type":"Answer","text":"Colors are grouped into buckets before counting, so very close shades are merged together. This avoids returning several near-identical colors and gives a more useful, distinct set instead."}}
   ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Image Color Extractor",
+  "url": "https://prismkit.online/image-color-extractor.html",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "Any (runs in browser)",
+  "offers": {"@type":"Offer","price":"0","priceCurrency":"USD"},
+  "description": "Extracts the dominant colors from an uploaded photo directly in the browser, with no server upload."
 }
 </script>
 </head>
