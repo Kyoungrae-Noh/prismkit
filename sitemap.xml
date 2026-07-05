@@ -36,6 +36,21 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://prismkit.online/guides/wcag-accessibility-guide.html</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prismkit.online/guides/css-gradient-guide.html</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://prismkit.online/guides/color-theory-basics.html</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://prismkit.online/about.html</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>

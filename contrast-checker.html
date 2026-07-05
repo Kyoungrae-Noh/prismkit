@@ -6,9 +6,6 @@
 <title>WCAG Color Contrast Checker — AA & AAA Compliance | Prism Kit</title>
 <meta name="description" content="Check any background/text color pair against WCAG 2.1 AA and AAA contrast requirements. See the exact contrast ratio and whether it passes, instantly, in your browser.">
 <link rel="canonical" href="https://prismkit.online/contrast-checker.html">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css">
 <meta property="og:type" content="website">
 <meta property="og:title" content="WCAG Color Contrast Checker — AA & AAA Compliance | Prism Kit">
 <meta property="og:description" content="Check any background/text color pair against WCAG 2.1 AA and AAA contrast requirements. See the exact contrast ratio and whether it passes, instantly, in your browser.">
@@ -16,6 +13,9 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="WCAG Color Contrast Checker — AA & AAA Compliance | Prism Kit">
 <meta name="twitter:description" content="Check any background/text color pair against WCAG 2.1 AA and AAA contrast requirements. See the exact contrast ratio and whether it passes, instantly, in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -25,6 +25,18 @@
     {"@type":"Question","name":"Why did my colors fail the contrast check even though they look different enough?","acceptedAnswer":{"@type":"Answer","text":"Contrast ratio is calculated from relative luminance, not how different two hues look to the eye. Two colors can look visually distinct but still have low luminance contrast, for example a mid-tone orange on a mid-tone blue often fails even though the hues are clearly different."}},
     {"@type":"Question","name":"Does the WCAG contrast requirement apply to large headings too?","acceptedAnswer":{"@type":"Answer","text":"Large text, 18.66px bold or larger, or 24px and up regular, has a lower required ratio of 3:1 for AA, because bigger text is easier to read at lower contrast."}}
   ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "WCAG Contrast Checker",
+  "url": "https://prismkit.online/contrast-checker.html",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "Any (runs in browser)",
+  "offers": {"@type":"Offer","price":"0","priceCurrency":"USD"},
+  "description": "Checks a background and text color pair against WCAG 2.1 AA and AAA contrast requirements and returns the exact ratio."
 }
 </script>
 </head>
@@ -86,6 +98,8 @@
       <div class="faq-q">Does this apply to large headings too?</div>
       <p class="faq-a">Large text (18.66px bold or larger, or 24px+ regular) has a lower required ratio — 3:1 for AA — because bigger text is easier to read at lower contrast. This tool checks against the normal-text thresholds; for large-text-only content, a 3:1 AA pass is generally enough.</p>
     </div>
+
+    <p style="margin-top:20px;"><a href="guides/wcag-accessibility-guide.html">Read the full WCAG contrast guide →</a></p>
   </div>
 </div>
 

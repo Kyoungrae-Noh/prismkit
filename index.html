@@ -27,6 +27,18 @@
   ]
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Prism Kit",
+  "url": "https://prismkit.online/",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "Any (runs in browser)",
+  "offers": {"@type":"Offer","price":"0","priceCurrency":"USD"},
+  "description": "Six free browser-based color tools: color picker, palette generator, gradient generator, WCAG contrast checker, image color extractor, and color name finder."
+}
+</script>
 </head>
 <body>
 
@@ -46,14 +58,31 @@
   <div class="tool-head">
     <div class="eyebrow">Color Tools</div>
     <h1>Six small tools for working with color</h1>
-    <p>Everything here runs in your browser — nothing you type or upload is sent to a server. Pick a tool below to get started.</p>
+    <p>Everything here runs in your browser — nothing you type or upload is sent to a server. Try the picker below, or jump straight to any tool.</p>
   </div>
 
-  <div class="tool-grid">
+  <div class="card">
+    <div class="row">
+      <div class="col" style="max-width:120px;">
+        <label>Try it — pick a color</label>
+        <input type="color" id="pickerInput" value="#FF6B4A">
+      </div>
+      <div class="col">
+        <div class="swatch-preview" id="pickerPreview"></div>
+      </div>
+    </div>
+    <div class="value-grid">
+      <div class="hex-tag" id="pickerHex">HEX <span class="copy-hint">copied</span></div>
+      <div class="hex-tag" id="pickerRgb">RGB <span class="copy-hint">copied</span></div>
+      <div class="hex-tag" id="pickerHsl">HSL <span class="copy-hint">copied</span></div>
+    </div>
+  </div>
+
+  <div class="tool-grid" style="margin-top:32px;">
     <a class="tool-card" href="color-picker.html">
       <div class="num">01</div>
       <h3>Color Picker</h3>
-      <p>Pick any color and get its HEX, RGB, and HSL values instantly.</p>
+      <p>Full picker page with copy-to-clipboard for HEX, RGB, and HSL.</p>
     </a>
     <a class="tool-card" href="palette-generator.html">
       <div class="num">02</div>
@@ -100,6 +129,25 @@
       <p class="faq-a">If you need a quick HEX/RGB/HSL conversion, start with the <a href="color-picker.html">Color Picker</a>. If you're checking accessibility compliance, go straight to the <a href="contrast-checker.html">Contrast Checker</a>.</p>
     </div>
   </div>
+
+  <div class="explainer">
+    <h2>Guides</h2>
+    <p>Deeper explanations behind the tools above, for anyone who wants the reasoning, not just the numbers.</p>
+    <div class="tool-grid">
+      <a class="tool-card" href="guides/wcag-accessibility-guide.html">
+        <h3>WCAG Contrast: AA vs AAA</h3>
+        <p>How the contrast ratio is calculated, what changed with the EU Accessibility Act, and common mistakes.</p>
+      </a>
+      <a class="tool-card" href="guides/color-theory-basics.html">
+        <h3>Color Theory Basics</h3>
+        <p>Analogous, complementary, triadic, and shades schemes explained — and when to use each.</p>
+      </a>
+      <a class="tool-card" href="guides/css-gradient-guide.html">
+        <h3>CSS Gradients Explained</h3>
+        <p>Linear, radial, and conic gradients, with copy-paste examples for common UI patterns.</p>
+      </a>
+    </div>
+  </div>
 </div>
 
 <footer class="site-footer">
@@ -111,5 +159,29 @@
   </div>
 </footer>
 
+<script src="assets/app.js"></script>
+<script>
+const pickerInput = document.getElementById('pickerInput');
+const pickerPreview = document.getElementById('pickerPreview');
+const pickerHex = document.getElementById('pickerHex');
+const pickerRgb = document.getElementById('pickerRgb');
+const pickerHsl = document.getElementById('pickerHsl');
+
+function updatePicker(){
+  const hex = pickerInput.value.toUpperCase();
+  const {r,g,b} = hexToRgb(hex);
+  const hsl = rgbToHsl(r,g,b);
+  pickerPreview.style.background = hex;
+  pickerHex.innerHTML = `${hex} <span class="copy-hint">copied</span>`;
+  pickerRgb.innerHTML = `rgb(${r}, ${g}, ${b}) <span class="copy-hint">copied</span>`;
+  pickerHsl.innerHTML = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%) <span class="copy-hint">copied</span>`;
+  setAccent(hex);
+}
+pickerInput.addEventListener('input', updatePicker);
+[pickerHex, pickerRgb, pickerHsl].forEach(el=>{
+  el.addEventListener('click', ()=> copyText(el.textContent.replace('copied','').trim(), el));
+});
+updatePicker();
+</script>
 </body>
 </html>
