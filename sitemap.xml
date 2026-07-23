@@ -6,62 +6,62 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://prismkit.online/color-picker.html</loc>
+    <loc>https://prismkit.online/color-picker</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://prismkit.online/palette-generator.html</loc>
+    <loc>https://prismkit.online/palette-generator</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://prismkit.online/gradient-generator.html</loc>
+    <loc>https://prismkit.online/gradient-generator</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://prismkit.online/contrast-checker.html</loc>
+    <loc>https://prismkit.online/contrast-checker</loc>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://prismkit.online/image-color-extractor.html</loc>
+    <loc>https://prismkit.online/image-color-extractor</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://prismkit.online/color-name-finder.html</loc>
+    <loc>https://prismkit.online/color-name-finder</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://prismkit.online/guides/wcag-accessibility-guide.html</loc>
+    <loc>https://prismkit.online/guides/wcag-accessibility-guide</loc>
     <changefreq>yearly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://prismkit.online/guides/css-gradient-guide.html</loc>
+    <loc>https://prismkit.online/guides/css-gradient-guide</loc>
     <changefreq>yearly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://prismkit.online/guides/color-theory-basics.html</loc>
+    <loc>https://prismkit.online/guides/color-theory-basics</loc>
     <changefreq>yearly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://prismkit.online/about.html</loc>
+    <loc>https://prismkit.online/about</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://prismkit.online/privacy.html</loc>
+    <loc>https://prismkit.online/privacy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.2</priority>
   </url>
   <url>
-    <loc>https://prismkit.online/contact.html</loc>
+    <loc>https://prismkit.online/contact</loc>
     <changefreq>yearly</changefreq>
     <priority>0.2</priority>
   </url>

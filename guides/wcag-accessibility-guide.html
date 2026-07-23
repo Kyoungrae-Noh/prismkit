@@ -10,11 +10,11 @@
 <link rel="manifest" href="/site.webmanifest" />
 <title>WCAG Color Contrast Guide: AA vs AAA Explained | Prism Kit</title>
 <meta name="description" content="A practical guide to WCAG color contrast requirements — what AA and AAA actually mean, how the ratio is calculated, common mistakes, and how the European Accessibility Act changed the bar in 2025.">
-<link rel="canonical" href="https://prismkit.online/guides/wcag-accessibility-guide.html">
+<link rel="canonical" href="https://prismkit.online/guides/wcag-accessibility-guide">
 <meta property="og:type" content="article">
 <meta property="og:title" content="WCAG Color Contrast Guide: AA vs AAA Explained | Prism Kit">
 <meta property="og:description" content="A practical guide to WCAG color contrast requirements — what AA and AAA actually mean, how the ratio is calculated, common mistakes, and how the European Accessibility Act changed the bar in 2025.">
-<meta property="og:url" content="https://prismkit.online/guides/wcag-accessibility-guide.html">
+<meta property="og:url" content="https://prismkit.online/guides/wcag-accessibility-guide">
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -32,11 +32,11 @@
 <body>
 
 <header class="site-header">
-  <div class="brand"><div class="brand-mark"></div><div class="brand-name"><a href="../index.html" style="color:var(--paper);">Prism Kit</a></div></div>
+  <div class="brand"><div class="brand-mark"></div><div class="brand-name"><a href="/" style="color:var(--paper);">Prism Kit</a></div></div>
   <nav class="site-nav">
-    <a href="../index.html">Tools</a>
-    <a href="../about.html">About</a>
-    <a href="../contact.html">Contact</a>
+    <a href="/">Tools</a>
+    <a href="/about">About</a>
+    <a href="/contact">Contact</a>
   </nav>
 </header>
 
@@ -44,7 +44,7 @@
   <div class="tool-head">
     <div class="eyebrow">Guide</div>
     <h1>WCAG Color Contrast: AA vs AAA, Explained</h1>
-    <p>Everything the <a href="../contrast-checker.html">Contrast Checker</a> tests for, and why the numbers are what they are.</p>
+    <p>Everything the <a href="/contrast-checker">Contrast Checker</a> tests for, and why the numbers are what they are.</p>
   </div>
 
   <h2>Why contrast rules exist</h2>
@@ -53,7 +53,7 @@
   <h2>How the contrast ratio is actually calculated</h2>
   <p>The ratio isn't based on how different two colors look to a human eye — it's based on relative luminance, a formula that weighs how much light a color reflects. Each color's RGB channels are converted to a linear scale, weighted (green contributes far more perceived brightness than blue), and combined into a single luminance value between 0 (black) and 1 (white). The contrast ratio is then:</p>
   <p class="mono" style="background:var(--surface-2);padding:14px 16px;border-radius:8px;display:inline-block;">(L1 + 0.05) / (L2 + 0.05)</p>
-  <p>where L1 is the lighter color's luminance and L2 is the darker one's. The result ranges from 1:1 (identical colors, no contrast) to 21:1 (pure black on pure white). This is exactly the formula the <a href="../contrast-checker.html">Contrast Checker</a> on this site uses.</p>
+  <p>where L1 is the lighter color's luminance and L2 is the darker one's. The result ranges from 1:1 (identical colors, no contrast) to 21:1 (pure black on pure white). This is exactly the formula the <a href="/contrast-checker">Contrast Checker</a> on this site uses.</p>
 
   <h2>AA vs AAA: what the levels actually require</h2>
   <table>
@@ -75,12 +75,12 @@
   </ul>
 
   <h2>Fixing a failing combination</h2>
-  <p>The fastest fix is almost always adjusting lightness, not hue — shifting a color a few percentage points darker or lighter in HSL usually preserves its "feel" while pushing the ratio over the line. Run the pair through the <a href="../contrast-checker.html">Contrast Checker</a>, and if it fails, try darkening the darker color or lightening the lighter one in 5% steps until it passes, then sanity-check that it still matches your intended look.</p>
+  <p>The fastest fix is almost always adjusting lightness, not hue — shifting a color a few percentage points darker or lighter in HSL usually preserves its "feel" while pushing the ratio over the line. Run the pair through the <a href="/contrast-checker">Contrast Checker</a>, and if it fails, try darkening the darker color or lightening the lighter one in 5% steps until it passes, then sanity-check that it still matches your intended look.</p>
 </div>
 
 <footer class="site-footer">
   <div>© 2026 Prism Kit. All tools run locally in your browser.</div>
-  <div><a href="../about.html">About</a><a href="../privacy.html">Privacy Policy</a><a href="../contact.html">Contact</a></div>
+  <div><a href="/about">About</a><a href="/privacy">Privacy Policy</a><a href="/contact">Contact</a></div>
 </footer>
 
 </body>
