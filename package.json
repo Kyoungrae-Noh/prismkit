@@ -13,10 +13,12 @@
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run typecheck && npm test && npm run build",
+    "check": "npm run typecheck && npm test && npm run test:server && npm run build",
     "test:secrets": "node scripts/check-client-secrets.mjs",
     "test:e2e": "playwright test",
-    "format": "prettier --write src tests *.ts *.json index.html docs README.md"
+    "format": "prettier --write src tests *.ts *.json index.html docs README.md",
+    "dev:api": "node --experimental-strip-types --env-file=.env server/index.ts",
+    "test:server": "node --experimental-strip-types --test server/searchad/*.test.ts"
   },
   "dependencies": {
     "lucide-react": "^1.59.0",

@@ -1,3 +1,4 @@
+import { LiveKeywords } from '../components/live-keywords'
 import { ResearchPanel } from '../components/research-panel'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -242,6 +243,7 @@ export function Keywords({ notify }: { notify(message: string): void }) {
           </span>
         </div>
       </section>
+      <LiveKeywords />
       <ResearchPanel />
       <div className="explainer-cards">
         <article>

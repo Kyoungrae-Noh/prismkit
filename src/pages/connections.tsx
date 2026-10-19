@@ -39,23 +39,26 @@ export function Connections() {
           <p>
             현재 수동 입력 자료와 DEMO 샘플을 구분하여 사용합니다.
             <br />
-            외부 서비스와의 연결은 다음 단계에서 제공됩니다.
+            검색광고는 키워드 화면에서 로컬 조회할 수 있습니다.
           </p>
         </div>
         <span className="connection-count">
-          0 <small>/ {connections.length} 연결됨</small>
+          0 <small>/ {connections.length} 운영 연결</small>
         </span>
       </div>
       <section className="research-panel panel" aria-label="데이터 소스 검증 현황">
         <h2>공식 데이터 소스 검증 현황</h2>
-        <p>인증된 호출 테스트 0건 · VERIFIED 소스 0개 · API 연결 비활성</p>
+        <p>검색광고 인증 호출 1건 성공 · VERIFIED 1개 · 로컬 조회 지원</p>
         <div className="research-grid">
           {sourceAudits.map((source) => (
             <article key={source.id}>
               <h3>{source.name}</h3>
               <span className="subtle-badge">{source.verification}</span>
               <p>{source.note}</p>
-              <p>문서 확인: {source.checkedDate} · 인증 테스트: 미실시</p>
+              <p>
+                문서 확인: {source.checkedDate} · 인증 테스트:{' '}
+                {source.authenticatedTestAt ? '성공' : '미실시'}
+              </p>
               <a href={source.documentation} target="_blank" rel="noreferrer">
                 공식 문서 보기 ↗
               </a>

@@ -13,12 +13,12 @@ export const sourceAudits: SourceAudit[] = [
   {
     id: 'searchad',
     name: '네이버 검색광고 키워드 도구',
-    verification: 'DOCUMENTED',
+    verification: 'VERIFIED',
     documentation: 'https://naver.github.io/searchad-apidoc/',
     checkedDate: '2026-10-19',
-    authenticatedTestAt: null,
+    authenticatedTestAt: '2026-10-19T10:24:17.896Z',
     usageApproved: false,
-    note: 'PC·모바일 검색수와 광고 연관 키워드. 라이선스·비밀키·광고주 ID 필요. 인증 테스트 미실시.',
+    note: '단일 GET 인증 성공(HTTP 200). 로컬 조회 가능. 상업 이용·영구 저장 조건은 미확인.',
   },
   {
     id: 'trend',
