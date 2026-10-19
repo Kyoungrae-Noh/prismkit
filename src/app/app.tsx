@@ -18,6 +18,7 @@ import { useWorkspace } from './workspace'
 import { Dashboard } from '../pages/dashboard'
 import { Ideas } from '../pages/ideas'
 import { Keywords } from '../pages/keywords'
+import { Publishing } from '../pages/publishing'
 import { Connections } from '../pages/connections'
 import { IdeaForm } from '../components/idea-form'
 import { EmptyState, Modal } from '../components/ui'
@@ -26,6 +27,7 @@ const navigation = [
   { path: '/', label: '대시보드', icon: LayoutDashboard },
   { path: '/ideas', label: '글감 관리', icon: FilePenLine },
   { path: '/keywords', label: '키워드 분석', icon: Search },
+  { path: '/publishing', label: '경쟁·발행 판단', icon: FilePenLine },
   { path: '/connections', label: '데이터 연결', icon: Plug },
 ]
 export function App() {
@@ -119,7 +121,7 @@ export function App() {
           </div>
           <div className="sidebar-footer">
             <span className="version-dot" />
-            Phase 1 <span>v0.2.0</span>
+            Phase 2D <span>v0.2.0</span>
           </div>
         </div>
       </aside>
@@ -176,6 +178,7 @@ export function App() {
                 element={<Ideas onCreate={() => setCreating(true)} notify={setToast} />}
               />
               <Route path="/keywords" element={<Keywords notify={setToast} />} />
+              <Route path="/publishing" element={<Publishing />} />
               <Route path="/connections" element={<Connections />} />
               <Route
                 path="*"
@@ -197,7 +200,7 @@ export function App() {
             <span>
               prismkit<span className="orange-text">.</span> <span>생각에 방향을 더하다</span>
             </span>
-            <span>로컬 저장 · DEMO / 수동 자료</span>
+            <span>로컬 저장 · DEMO / MANUAL / LIVE</span>
           </footer>
         </main>
       </div>

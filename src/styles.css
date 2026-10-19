@@ -2976,3 +2976,82 @@ textarea {
 .research-grid article select {
   max-width: 100%;
 }
+
+.publishing-page {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.publishing-page table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.publishing-page th,
+.publishing-page td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ece9e4;
+}
+.publishing-page p,
+.publishing-page li,
+.publishing-page td {
+  overflow-wrap: anywhere;
+}
+.publishing-page ul {
+  padding-left: 22px;
+}
+.publishing-page details,
+.idea-form details {
+  margin: 12px 0;
+}
+.idea-form details label {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+}
+.idea-form fieldset {
+  min-width: 0;
+  border: 1px solid #e5e1da;
+  border-radius: 8px;
+  padding: 12px;
+}
+.idea-form fieldset label {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.evidence-image {
+  max-width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+}
+.idea-form figure {
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.publishing-page input[type='file'] {
+  max-width: 100%;
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .publishing-page th,
+  .publishing-page td {
+    padding: 8px;
+    min-width: 100px;
+  }
+}
+.publishing-page .research-panel {
+  margin: 0;
+  border: 1px solid #e5e8e1;
+  border-radius: 12px;
+  background: #fff;
+}
+.publishing-page > *,
+.publishing-page .candidate-actions > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.publishing-page .candidate-actions > label {
+  display: grid;
+  white-space: normal;
+}

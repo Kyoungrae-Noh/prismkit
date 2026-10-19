@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useWorkspace } from '../app/workspace'
 import {
@@ -530,6 +531,12 @@ export function CandidatePanel({ live }: { live: LiveCandidateBatch | null }) {
             {saved.map((item) => (
               <article key={item.id} aria-label={`${item.candidate.keyword} 저장 후보`}>
                 <h4>{item.candidate.keyword}</h4>
+                <Link
+                  className="button"
+                  to={`/publishing?candidate=${encodeURIComponent(item.id)}`}
+                >
+                  경쟁 분석
+                </Link>
                 <p>
                   {item.candidate.mode} · {item.candidate.intent} · {item.candidate.status}
                 </p>
