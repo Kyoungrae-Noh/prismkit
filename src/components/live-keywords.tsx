@@ -3,7 +3,11 @@ import { createSearchAdProvider } from '../providers/searchad-client'
 import type { SearchAdResponse } from '../providers/searchad-types'
 import { displayCount } from '../domain/research'
 const provider = createSearchAdProvider()
-export function LiveKeywords() {
+export function LiveKeywords({
+  onData,
+}: {
+  onData?: (keyword: string, data: SearchAdResponse) => void
+}) {
   const [keyword, setKeyword] = useState(''),
     [data, setData] = useState<SearchAdResponse | null>(null),
     [queried, setQueried] = useState(''),
@@ -17,7 +21,9 @@ export function LiveKeywords() {
     setError('')
     setData(null)
     try {
-      setData(await provider.query(keyword.trim()))
+      const response = await provider.query(keyword.trim())
+      setData(response)
+      onData?.(keyword.trim(), response)
       setQueried(keyword.trim())
     } catch (error) {
       setError(error instanceof Error ? error.message : '조회에 실패했습니다.')

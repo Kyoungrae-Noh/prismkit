@@ -1,3 +1,4 @@
+import { CandidatePanel, type LiveCandidateBatch } from '../components/candidate-panel'
 import { LiveKeywords } from '../components/live-keywords'
 import { ResearchPanel } from '../components/research-panel'
 import { useState } from 'react'
@@ -20,6 +21,7 @@ import { categories, type Keyword } from '../domain/models'
 const competitionLabels = { low: '낮음', medium: '보통', high: '높음' }
 export function Keywords({ notify }: { notify(message: string): void }) {
   const { keywords, ideas } = useWorkspace()
+  const [liveBatch, setLiveBatch] = useState<LiveCandidateBatch | null>(null)
   const [params, setParams] = useSearchParams()
   const query = params.get('keyword') ?? ''
   const [category, setCategory] = useState('all')
@@ -243,7 +245,8 @@ export function Keywords({ notify }: { notify(message: string): void }) {
           </span>
         </div>
       </section>
-      <LiveKeywords />
+      <LiveKeywords onData={(keyword, data) => setLiveBatch({ keyword, data })} />
+      <CandidatePanel live={liveBatch} />
       <ResearchPanel />
       <div className="explainer-cards">
         <article>
