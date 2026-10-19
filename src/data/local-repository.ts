@@ -1,3 +1,4 @@
+import { createResearchStore } from './research-store'
 import {
   categories,
   statuses,
@@ -74,6 +75,7 @@ export function createLocalRepository(storage: StoragePort): WorkspaceRepository
     }
   }
   return {
+    ...createResearchStore(storage),
     async listIdeas() {
       return read().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     },

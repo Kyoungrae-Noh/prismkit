@@ -51,7 +51,7 @@ export function Dashboard({ onCreate }: { onCreate(): void }) {
       title: '발견한 기회',
       value: opportunityCount,
       unit: '개',
-      detail: '기회 점수 80점 이상 · 샘플',
+      detail: '기회 점수 80점 이상 · DEMO',
       icon: TrendingUp,
       tone: 'blue',
     },
@@ -156,7 +156,7 @@ export function Dashboard({ onCreate }: { onCreate(): void }) {
           <div className="section-heading">
             <div>
               <h2>
-                키워드 관심도 흐름 <span className="subtle-badge">샘플</span>
+                키워드 관심도 흐름 <span className="subtle-badge">DEMO</span>
               </h2>
               <p>주요 키워드의 상대적인 관심도 변화</p>
             </div>
@@ -315,7 +315,7 @@ export function Dashboard({ onCreate }: { onCreate(): void }) {
                 <h3>{keyword.term}</h3>
                 <div className="opportunity-stats">
                   <div>
-                    <span className="small-muted">월간 검색량 · 샘플</span>
+                    <span className="small-muted">월간 검색량 · DEMO</span>
                     <strong>{formatNumber(keyword.monthlySearches)}</strong>
                   </div>
                   <Sparkline values={keyword.trend} label={`${keyword.term} 샘플 추세`} />

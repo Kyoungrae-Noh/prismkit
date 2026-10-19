@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import type { Connection, Idea, IdeaInput, Keyword, WorkspaceRepository } from '../domain/models'
 
 interface Workspace {
+  researchRepository: Pick<WorkspaceRepository, 'listResearch' | 'saveResearch'>
   ideas: Idea[]
   keywords: Keyword[]
   connections: Connection[]
@@ -63,7 +64,17 @@ export function WorkspaceProvider({
   }
   return (
     <WorkspaceContext.Provider
-      value={{ ideas, keywords, connections, loading, error, refresh, saveIdea, removeIdea }}
+      value={{
+        researchRepository: repository,
+        ideas,
+        keywords,
+        connections,
+        loading,
+        error,
+        refresh,
+        saveIdea,
+        removeIdea,
+      }}
     >
       {children}
     </WorkspaceContext.Provider>

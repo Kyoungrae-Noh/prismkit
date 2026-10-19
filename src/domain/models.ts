@@ -1,3 +1,4 @@
+import type { KeywordResearch, ResearchInput } from './research'
 export const statuses = ['inbox', 'planned', 'drafting', 'published'] as const
 export type IdeaStatus = (typeof statuses)[number]
 export const statusLabels: Record<IdeaStatus, string> = {
@@ -43,6 +44,8 @@ export interface Connection {
 
 /** Implement a server-backed adapter against this contract in the next phase. */
 export interface WorkspaceRepository {
+  listResearch(): Promise<KeywordResearch[]>
+  saveResearch(input: ResearchInput, id?: string): Promise<KeywordResearch>
   listIdeas(): Promise<Idea[]>
   createIdea(input: IdeaInput): Promise<Idea>
   updateIdea(id: string, input: IdeaInput): Promise<Idea>

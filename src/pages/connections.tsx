@@ -1,3 +1,4 @@
+import { sourceAudits } from '../providers/catalog'
 import {
   ArrowRight,
   Bot,
@@ -34,9 +35,9 @@ export function Connections() {
         </div>
         <div>
           <span className="eyebrow">차근차근 연결하는 가능성</span>
-          <h2>지금은 샘플로, 다음은 나의 데이터로.</h2>
+          <h2>수동 자료 저장과 데이터 소스 검증</h2>
           <p>
-            현재 워크스페이스는 샘플 데이터로 동작합니다.
+            현재 수동 입력 자료와 DEMO 샘플을 구분하여 사용합니다.
             <br />
             외부 서비스와의 연결은 다음 단계에서 제공됩니다.
           </p>
@@ -45,6 +46,23 @@ export function Connections() {
           0 <small>/ {connections.length} 연결됨</small>
         </span>
       </div>
+      <section className="research-panel panel" aria-label="데이터 소스 검증 현황">
+        <h2>공식 데이터 소스 검증 현황</h2>
+        <p>인증된 호출 테스트 0건 · VERIFIED 소스 0개 · API 연결 비활성</p>
+        <div className="research-grid">
+          {sourceAudits.map((source) => (
+            <article key={source.id}>
+              <h3>{source.name}</h3>
+              <span className="subtle-badge">{source.verification}</span>
+              <p>{source.note}</p>
+              <p>문서 확인: {source.checkedDate} · 인증 테스트: 미실시</p>
+              <a href={source.documentation} target="_blank" rel="noreferrer">
+                공식 문서 보기 ↗
+              </a>
+            </article>
+          ))}
+        </div>
+      </section>
       <section className="connections-grid" aria-label="연결 가능한 데이터 소스">
         {connections.map((connection) => {
           const Icon = icons[connection.kind]

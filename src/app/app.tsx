@@ -119,7 +119,7 @@ export function App() {
           </div>
           <div className="sidebar-footer">
             <span className="version-dot" />
-            Phase 0 <span>v0.1.0</span>
+            Phase 1 <span>v0.2.0</span>
           </div>
         </div>
       </aside>
@@ -142,7 +142,7 @@ export function App() {
           <div className="topbar-actions">
             <span className="demo-label">
               <span />
-              샘플 워크스페이스
+              로컬 워크스페이스
             </span>
             <div className="topbar-divider" />
             <span className="profile-avatar" title="로컬 관리자 워크스페이스">
@@ -197,7 +197,7 @@ export function App() {
             <span>
               prismkit<span className="orange-text">.</span> <span>생각에 방향을 더하다</span>
             </span>
-            <span>로컬 저장 · 샘플 데이터</span>
+            <span>로컬 저장 · DEMO / 수동 자료</span>
           </footer>
         </main>
       </div>

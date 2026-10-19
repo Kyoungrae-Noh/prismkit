@@ -1,3 +1,4 @@
+import { ResearchPanel } from '../components/research-panel'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
@@ -55,7 +56,7 @@ export function Keywords({ notify }: { notify(message: string): void }) {
         </div>
         <span className="demo-label">
           <span />
-          샘플 데이터 모드
+          DEMO · 샘플 데이터 모드
         </span>
       </div>
       <section className="keyword-search-panel">
@@ -233,7 +234,7 @@ export function Keywords({ notify }: { notify(message: string): void }) {
         )}
         <div className="table-footer">
           <span>
-            {keywords.length}개 샘플 중 {filtered.length}개 표시
+            {keywords.length}개 DEMO 샘플 중 {filtered.length}개 표시
           </span>
           <span>
             <Sparkles size={13} />
@@ -241,6 +242,7 @@ export function Keywords({ notify }: { notify(message: string): void }) {
           </span>
         </div>
       </section>
+      <ResearchPanel />
       <div className="explainer-cards">
         <article>
           <TrendingUp size={20} />
@@ -260,7 +262,7 @@ export function Keywords({ notify }: { notify(message: string): void }) {
       {selected && (
         <Modal
           title={selected.term}
-          description={`${selected.category} · ${selected.intent} · 샘플 데이터`}
+          description={`${selected.category} · ${selected.intent} · DEMO 샘플 데이터`}
           onClose={() => setSelected(null)}
         >
           <div className="keyword-detail-stats">
