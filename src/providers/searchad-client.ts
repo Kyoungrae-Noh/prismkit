@@ -13,15 +13,15 @@ export function createSearchAdProvider(): SearchAdProvider {
         cache: 'no-store',
       })
     } catch {
-      throw new Error(
-        '로컬 API 서버에 연결하지 못했습니다. npm run dev:api 실행 상태를 확인하세요.',
-      )
+      throw new Error('API에 연결하지 못했습니다. 관리자 로그인 상태와 서버 연결을 확인하세요.')
     }
     let body: SearchAdResponse & { error?: { message?: string } }
     try {
       body = await response.json()
     } catch {
-      throw new Error('로컬 API 응답을 읽지 못했습니다. 서버 실행 상태를 확인하세요.')
+      throw new Error(
+        'API 응답을 읽지 못했습니다. 페이지를 새로고침하여 관리자 로그인을 확인하세요.',
+      )
     }
     if (!response.ok) throw new Error(body.error?.message || `조회 실패 (HTTP ${response.status})`)
     if (

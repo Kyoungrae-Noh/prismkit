@@ -8,7 +8,7 @@ const marker = 'PRISMKIT_TEST_ONLY_SECRET_CANARY_9bd82'
 const local = existsSync('.env') ? parseEnv(readFileSync('.env', 'utf8')) : {}
 const protectedValues = [
   marker,
-  ...['NAVER_SEARCHAD_API_KEY', 'NAVER_SEARCHAD_SECRET_KEY']
+  ...['NAVER_SEARCHAD_API_KEY', 'NAVER_SEARCHAD_SECRET_KEY', 'NAVER_SEARCHAD_CUSTOMER_ID']
     .map((name) => process.env[name] || local[name])
     .filter(Boolean),
 ]
@@ -38,6 +38,33 @@ function inspect(dir) {
 }
 inspect(outDir)
 if (existsSync('dist')) inspect('dist')
+const repository = spawnSync(
+  'git',
+  ['ls-files', '--cached', '--others', '--exclude-standard', '-z'],
+  {
+    encoding: 'utf8',
+  },
+)
+assert.equal(repository.status, 0, 'Repository secret scan must enumerate files')
+for (const path of new Set(repository.stdout.split('\0').filter(Boolean))) {
+  assert.ok(
+    !/(^|\/)\.env(?:\.|$)/.test(path) || path === '.env.example',
+    'A private environment file is eligible for Git',
+  )
+  assert.ok(
+    !/(^|\/)\.dev\.vars(?:\.|$)/.test(path),
+    'A private environment file is eligible for Git',
+  )
+  if (!existsSync(path)) continue
+  const contents = readFileSync(path)
+  for (const value of protectedValues)
+    // The canary is intentionally defined in this scanner, but must never be in client output.
+    if (value !== marker)
+      assert.ok(
+        !contents.includes(Buffer.from(value)),
+        'Local credential found in a Git-eligible file',
+      )
+}
 const rejected = build({ VITE_NAVER_API_KEY: marker })
 assert.notEqual(rejected.status, 0, 'VITE credential exposure must be rejected')
 assert.ok(
@@ -45,5 +72,5 @@ assert.ok(
   'Expected credential boundary rejection',
 )
 console.log(
-  'PASS: server credential canaries and local SearchAd keys absent from browser artifacts; VITE_ credential build rejected.',
+  'PASS: local SearchAd credentials absent from Git-eligible files and browser artifacts; canary excluded; VITE_ credential build rejected.',
 )

@@ -13,12 +13,18 @@
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run typecheck && npm test && npm run test:server && npm run build",
+    "check": "npm run typecheck && npm run typecheck:edge && npm test && npm run test:server && npm run test:edge && npm run build",
     "test:secrets": "node scripts/check-client-secrets.mjs",
     "test:e2e": "playwright test",
     "format": "prettier --write src tests *.ts *.json index.html docs README.md",
     "dev:api": "node --experimental-strip-types --env-file=.env server/index.ts",
-    "test:server": "node --experimental-strip-types --test server/searchad/*.test.ts"
+    "test:server": "node --experimental-strip-types --test server/searchad/*.test.ts",
+    "test:edge": "node --experimental-strip-types --test edge/*.test.ts",
+    "typecheck:edge": "tsc -p tsconfig.edge.json",
+    "types:edge": "wrangler types worker/env.d.ts --config worker/wrangler.jsonc --env-interface Env && wrangler types pages-env.d.ts --config wrangler.jsonc --env-interface PagesEnv --include-runtime false && prettier --write worker/env.d.ts pages-env.d.ts",
+    "build:edge": "wrangler deploy --dry-run --config worker/wrangler.jsonc --outdir ../test-results/worker && wrangler pages functions build --outdir test-results/pages --compatibility-date 2026-10-19 --compatibility-flags nodejs_compat",
+    "test:runtime": "npm run build:edge && node --test tests/runtime/*.test.mjs",
+    "check:all": "npm run check && npm run test:runtime && npm run test:secrets && npm run test:e2e"
   },
   "dependencies": {
     "lucide-react": "^1.59.0",
@@ -35,10 +41,13 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "jose": "^6.2.12",
     "jsdom": "^28.0.0",
+    "miniflare": "^5.20261019.0-beta",
     "prettier": "^3.9.10",
     "typescript": "~5.9.3",
     "vite": "^8.3.4",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wrangler": "^4.151.2"
   }
 }

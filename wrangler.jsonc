@@ -1,0 +1,43 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "prismkit-git",
+  "pages_build_output_dir": "dist",
+  "compatibility_date": "2026-10-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "ACCESS_ISSUER": "",
+    "ACCESS_AUD": "",
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "SEARCHAD",
+        "class_name": "SearchAdBudget",
+        "script_name": "prismkit-searchad",
+      },
+    ],
+  },
+  "env": {
+    "preview": {
+      "vars": {
+        "ACCESS_ISSUER": "",
+        "ACCESS_AUD": "",
+      },
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "SEARCHAD",
+            "class_name": "SearchAdBudget",
+            "script_name": "prismkit-searchad",
+          },
+        ],
+      },
+      "secrets": {
+        "required": ["ADMIN_EMAIL"],
+      },
+    },
+  },
+  "secrets": {
+    "required": ["ADMIN_EMAIL"],
+  },
+}

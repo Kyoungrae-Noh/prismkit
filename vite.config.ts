@@ -19,7 +19,11 @@ export default defineConfig(({ mode }) => {
       {
         name: 'server-boundary',
         load(id: string) {
-          if (id.replaceAll('\\', '/').includes('/server/'))
+          if (
+            ['server', 'edge', 'worker', 'functions'].some((dir) =>
+              id.replaceAll('\\', '/').startsWith(`${process.cwd()}/${dir}/`),
+            )
+          )
             throw new Error('Server modules cannot be imported into the browser bundle.')
         },
       },

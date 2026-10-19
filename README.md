@@ -1,6 +1,8 @@
 # Prismkit
 
-키워드 탐색과 콘텐츠 기획을 위한 개인 워크스페이스. 기존 색상 도구 서비스를 전면 교체한 **Phase 2C 로컬 키워드 후보 선정 도구**입니다.
+키워드 탐색과 콘텐츠 기획을 위한 개인 워크스페이스. Phase 2D의 경쟁 분석·발행 판단 기능을 포함합니다. Phase 2E 서버리스 배포 코드는 로컬 검증되었으나 **운영 배포는 보안·권한 확인으로 차단된 상태**입니다. 현재 운영 사이트 교체는 완료되지 않았습니다.
+
+[Phase 2E 재개 결과와 배포 조건](docs/PHASE2E_RESUME_REPORT.md)
 
 ## 실행
 
@@ -30,6 +32,8 @@ npm run test:secrets # 서버 키 빌드 제외 및 VITE_ 키 주입 차단 검�
 npm run test:watch
 npm run format
 ```
+
+Cloudflare 서버리스 코드 검증은 `npm run typecheck:edge`, `npm run test:edge`, `npm run test:runtime`으로 실행합니다. 런타임 테스트는 로컬 포트를 사용하며 네이버 응답과 Access 공개키를 모의 처리합니다. `npm run build:edge`는 dry-run 빌드만 수행합니다. 전체 검증은 `PLAYWRIGHT_CHANNEL=chrome npm run check:all`입니다(Chrome 설치 환경). Access 설정이 비어 있는 배포 설정을 그대로 운영에 올리지 마세요.
 
 브라우저 검증:
 

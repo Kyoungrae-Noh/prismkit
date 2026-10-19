@@ -1,0 +1,33 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "prismkit-searchad",
+  "main": "index.ts",
+  "compatibility_date": "2026-10-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": {
+    "enabled": false,
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "SEARCHAD",
+        "class_name": "SearchAdBudget",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["SearchAdBudget"],
+    },
+  ],
+  "secrets": {
+    "required": [
+      "NAVER_SEARCHAD_API_KEY",
+      "NAVER_SEARCHAD_SECRET_KEY",
+      "NAVER_SEARCHAD_CUSTOMER_ID",
+    ],
+  },
+}
