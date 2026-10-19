@@ -6,11 +6,15 @@ import assert from 'node:assert/strict'
 const outDir = resolve('test-results/security-dist')
 const marker = 'PRISMKIT_TEST_ONLY_SECRET_CANARY_9bd82'
 const local = existsSync('.env') ? parseEnv(readFileSync('.env', 'utf8')) : {}
+const cloudflare = existsSync('.env.cloudflare')
+  ? parseEnv(readFileSync('.env.cloudflare', 'utf8'))
+  : {}
 const protectedValues = [
   marker,
   ...['NAVER_SEARCHAD_API_KEY', 'NAVER_SEARCHAD_SECRET_KEY', 'NAVER_SEARCHAD_CUSTOMER_ID']
     .map((name) => process.env[name] || local[name])
     .filter(Boolean),
+  ...[process.env.CLOUDFLARE_API_TOKEN || cloudflare.CLOUDFLARE_API_TOKEN].filter(Boolean),
 ]
 const env = {
   ...process.env,

@@ -1,8 +1,8 @@
 # Prismkit
 
-키워드 탐색과 콘텐츠 기획을 위한 개인 워크스페이스. Phase 2D의 경쟁 분석·발행 판단 기능을 포함합니다. Phase 2E 서버리스 배포 코드는 로컬 검증되었으나 **운영 배포는 보안·권한 확인으로 차단된 상태**입니다. 현재 운영 사이트 교체는 완료되지 않았습니다.
+키워드 탐색과 콘텐츠 기획을 위한 개인 워크스페이스. 경쟁 분석·발행 판단 기능과 Cloudflare Access로 보호하는 Pages·서버리스 검색광고 API 운영 구성을 포함합니다.
 
-[Phase 2E 재개 결과와 배포 조건](docs/PHASE2E_RESUME_REPORT.md)
+[운영 구성·검증·복구 절차](docs/DEPLOYMENT.md) · [이전 Phase 2E 조사 기록](docs/PHASE2E_RESUME_REPORT.md)
 
 ## 실행
 
