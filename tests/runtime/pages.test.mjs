@@ -51,6 +51,8 @@ test('compiled Pages routing protects SPA, assets, API and preview hosts using r
       '/publishing',
       '/assets/app.js',
       '/api/searchad/keyword?keyword=test',
+      '/api/ai/status',
+      '/api/ai/extract',
     ]) {
       const denied = await runtime.dispatchFetch(`https://prismkit.online${path}`)
       assert.equal(denied.status, 401, path)
@@ -84,6 +86,17 @@ test('compiled Pages routing protects SPA, assets, API and preview hosts using r
     )
     assert.equal(missingBinding.status, 503)
     assert.ok(!(await missingBinding.text()).includes('test-audience'))
+    const aiStatus = await runtime.dispatchFetch('https://prismkit.online/api/ai/status', {
+      headers: { 'cf-access-jwt-assertion': token, 'x-prismkit-request': 'capture-ai' },
+    })
+    assert.equal(aiStatus.status, 200)
+    assert.equal((await aiStatus.json()).connected, false)
+    const aiDisabled = await runtime.dispatchFetch('https://prismkit.online/api/ai/extract', {
+      method: 'POST',
+      headers: { 'cf-access-jwt-assertion': token, 'x-prismkit-request': 'capture-ai' },
+    })
+    assert.equal(aiDisabled.status, 503)
+    assert.equal((await aiDisabled.json()).error.code, 'DISABLED')
     assert.equal(assets, 3, 'Rejected API requests must never fall back to the SPA')
   } finally {
     await runtime.dispose()

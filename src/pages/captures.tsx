@@ -12,7 +12,7 @@ import {
 } from '../domain/captures'
 import { createCaptureStore, linkCaptureIdea } from '../data/capture-store'
 import { blobDataUrl, imageVault } from '../data/capture-images'
-import { extractionProvider } from '../providers/extraction'
+import { AICaptures } from '../components/ai-captures'
 import { createCaptureQueue } from '../data/capture-queue'
 import { pastedImages, transferFiles } from '../data/capture-input'
 
@@ -55,6 +55,9 @@ export function CapturesPage() {
     [failed, setFailed] = useState<File[]>([]),
     [editing, setEditing] = useState<CaptureDraft | null>(null),
     [deleting, setDeleting] = useState<string | null>(null)
+  const [aiBusy, setAiBusy] = useState(false),
+    [approveAll, setApproveAll] = useState(false)
+  const [deletingDraft, setDeletingDraft] = useState<string | null>(null)
   const queue = useRef<ReturnType<typeof createCaptureQueue> | null>(null)
   const dragDepth = useRef(0)
   const [dragging, setDragging] = useState(false)
@@ -76,6 +79,7 @@ export function CapturesPage() {
     if (JSON.stringify(store.read()) !== JSON.stringify(data))
       throw new Error('자료가 다른 탭에서 변경되었습니다. 다시 불러온 뒤 시도하세요.')
     store.write(next)
+    setApproveAll(false)
     setData(next)
     setError('')
   }
@@ -138,15 +142,11 @@ export function CapturesPage() {
         </div>
       </div>
       <section className="panel research-panel">
-        <h2>AI 판독 미연결 · 수동 입력 가능</h2>
+        <h2>캡처 이미지 보관</h2>
         <p>
-          승인된 AI API와 비용 설정이 없어 이미지의 내용을 자동 추출하지 않습니다. 제목·출처·날짜는
-          보이는 내용만 입력하고, 불명확한 글자는 확인 사항에 남겨주세요. 이미지와 텍스트를 외부
-          서버로 보내지 않습니다.
+          업로드만으로 이미지를 외부로 전송하지 않습니다. AI 판독은 별도 선택·동의·버튼 실행이
+          필요합니다.
         </p>
-        <button className="button secondary" disabled={!extractionProvider.connected}>
-          AI 글감 추출 (미연결)
-        </button>
         <p>
           PNG/JPG/JPEG/WebP · 파일당 4 MiB · 한 번에 최대 20장 · 현재 보관 총 20장/20 MiB · 최대
           2,000만 화소. 원본은 이 브라우저의 이미지 저장소에 보관합니다. 브라우저 자료 삭제 시
@@ -203,13 +203,17 @@ export function CapturesPage() {
         <p aria-live="polite">현재 등록 이미지: {data.images.length} / 20장</p>
         {busy && <progress aria-label="이미지 처리 중" />}
         {!!failed.length && (
-          <button className="button secondary" disabled={busy} onClick={() => void upload(failed)}>
+          <button
+            className="button secondary"
+            disabled={busy || aiBusy}
+            onClick={() => void upload(failed)}
+          >
             실패한 파일 다시 시도 ({failed.length})
           </button>
         )}
         {message && <p role="status">{message}</p>}
         {error && <p role="alert">{error}</p>}
-        <button className="button secondary" disabled={busy} onClick={reload}>
+        <button className="button secondary" disabled={busy || aiBusy} onClick={reload}>
           저장 자료 다시 불러오기
         </button>
       </section>
@@ -217,6 +221,7 @@ export function CapturesPage() {
         {data.images.map((image, index) => (
           <article
             className="panel capture-card"
+            id={`image-${image.id}`}
             key={image.id}
             aria-label={`${index + 1}번 캡처 ${image.name}`}
           >
@@ -227,7 +232,7 @@ export function CapturesPage() {
             <div className="capture-actions">
               <button
                 className="button secondary"
-                disabled={busy || index === 0}
+                disabled={busy || aiBusy || index === 0}
                 onClick={() =>
                   action(() => {
                     const images = [...data.images]
@@ -240,7 +245,7 @@ export function CapturesPage() {
               </button>
               <button
                 className="button secondary"
-                disabled={busy || index === data.images.length - 1}
+                disabled={busy || aiBusy || index === data.images.length - 1}
                 onClick={() =>
                   action(() => {
                     const images = [...data.images]
@@ -253,14 +258,14 @@ export function CapturesPage() {
               </button>
               <button
                 className="button secondary"
-                disabled={busy}
+                disabled={busy || aiBusy}
                 onClick={() => setEditing(newDraft([image.id]))}
               >
                 이 이미지에서 글감 입력
               </button>
               <button
                 className="button secondary"
-                disabled={busy}
+                disabled={busy || aiBusy}
                 onClick={() => setDeleting(image.id)}
               >
                 이미지 삭제
@@ -305,17 +310,77 @@ export function CapturesPage() {
           </article>
         ))}
       </div>
+      <AICaptures
+        data={data}
+        onData={(next) => {
+          setData(next)
+          setApproveAll(false)
+        }}
+        onBusy={setAiBusy}
+      />
       <section className="panel research-panel">
         <h2>추출 글감 · 사용자 확인</h2>
         <p>
           한 이미지에 여러 글감이 있으면 각각 입력하세요. 같은 제목은 중복 가능성으로 묶으며 자동
           삭제하지 않습니다.
         </p>
-        <button className="button primary" disabled={busy} onClick={() => setEditing(newDraft())}>
+        <button
+          className="button primary"
+          disabled={busy || aiBusy}
+          onClick={() => setEditing(newDraft())}
+        >
           수동 글감 입력
         </button>
         {!!groups.length && (
-          <p>동일 제목 중복 그룹 {groups.length}개 · 원본과 내용을 비교하세요.</p>
+          <div>
+            <p>동일 제목 중복 그룹 {groups.length}개 · 자동 병합·삭제하지 않습니다.</p>
+            {groups.map((g, index) => (
+              <p key={g[0]}>
+                그룹 {index + 1}:{' '}
+                {g.map((id) => (
+                  <a key={id} className="text-link" href={`#draft-${id}`}>
+                    {data.drafts.find((d) => d.id === id)?.title} ·{' '}
+                  </a>
+                ))}
+              </p>
+            ))}
+          </div>
+        )}
+        {!!data.drafts.length && (
+          <div>
+            <label>
+              <input
+                type="checkbox"
+                checked={approveAll}
+                onChange={(e) => setApproveAll(e.target.checked)}
+              />
+              현재 모든 추출 글감을 원본과 대조했습니다. 미확인 정보는 확인 사항에 남겼습니다.
+            </label>
+            <button
+              className="button secondary"
+              disabled={!approveAll || busy || aiBusy || !!editing}
+              onClick={() =>
+                action(() => {
+                  const eligible = data.drafts.filter(
+                    (d) =>
+                      d.title.trim() && d.keyword.trim() && (d.mode !== 'AI' || d.imageIds.length),
+                  )
+                  save({
+                    ...data,
+                    drafts: data.drafts.map((d) =>
+                      eligible.includes(d) ? { ...d, confirmed: true } : d,
+                    ),
+                  })
+                  setApproveAll(false)
+                  setMessage(
+                    `${eligible.length}개 검토 승인. 업무 글감 자동 등록은 하지 않았습니다.`,
+                  )
+                })
+              }
+            >
+              전체 승인 (제목·키워드·원본 확인)
+            </button>
+          </div>
         )}
         {editing && (
           <form
@@ -325,10 +390,13 @@ export function CapturesPage() {
               action(() => {
                 save({
                   ...data,
-                  drafts: [...data.drafts.filter((d) => d.id !== editing.id), editing],
+                  drafts: [
+                    ...data.drafts.filter((d) => d.id !== editing.id),
+                    editing.ai ? { ...editing, ai: { ...editing.ai, edited: true } } : editing,
+                  ],
                 })
                 setEditing(null)
-                setMessage('추출 글감을 저장했습니다. AI 분석 완료를 의미하지 않습니다.')
+                setMessage('추출 글감을 저장했습니다. 업무 글감 등록은 승인 후 별도로 진행하세요.')
               })
             }}
           >
@@ -388,7 +456,11 @@ export function CapturesPage() {
               <select
                 value={editing.category}
                 onChange={(e) =>
-                  setEditing({ ...editing, category: e.target.value as CaptureDraft['category'] })
+                  setEditing({
+                    ...editing,
+                    category: e.target.value as CaptureDraft['category'],
+                    confirmed: false,
+                  })
                 }
               >
                 {categories.map((c) => (
@@ -450,6 +522,7 @@ export function CapturesPage() {
         {data.drafts.map((d) => (
           <article
             className="capture-draft"
+            id={`draft-${d.id}`}
             key={d.id}
             aria-label={`${d.title || '제목 미입력'} 추출 글감`}
           >
@@ -468,6 +541,54 @@ export function CapturesPage() {
               {d.imageIds.map((id) => data.images.find((i) => i.id === id)?.name).join(', ') ||
                 '연결 없음'}
             </p>
+            {d.ai && (
+              <p>
+                판독: {d.ai.provider} / {d.ai.model} · {d.ai.at} ·{' '}
+                {d.ai.edited ? '사용자 수정됨' : '원본 AI 결과'}
+                <br />
+                원본 인용: {d.ai.evidence}
+                <br />
+                출처 근거: {d.ai.sourceEvidence || '미확인'} · 날짜 근거:{' '}
+                {d.ai.dateEvidence || '미확인'}
+              </p>
+            )}
+            {d.imageIds.map((id) => (
+              <a className="text-link" key={id} href={`#image-${id}`}>
+                원본 미리보기 ·{' '}
+              </a>
+            ))}
+            {d.ai && d.ai.keywords.length > 1 && (
+              <label>
+                분석할 핵심 키워드 선택
+                <select
+                  value={d.keyword}
+                  onChange={(e) =>
+                    action(() =>
+                      save({
+                        ...data,
+                        drafts: data.drafts.map((row) =>
+                          row.id === d.id
+                            ? {
+                                ...row,
+                                keyword: e.target.value,
+                                confirmed: false,
+                                ai: { ...d.ai!, edited: true },
+                              }
+                            : row,
+                        ),
+                      }),
+                    )
+                  }
+                >
+                  <option value={d.keyword}>{d.keyword}</option>
+                  {d.ai.keywords
+                    .filter((k) => k !== d.keyword)
+                    .map((k) => (
+                      <option key={k}>{k}</option>
+                    ))}
+                </select>
+              </label>
+            )}
             <p>{d.summary}</p>
             {d.uncertain && <p>추가 확인: {d.uncertain}</p>}
             <div className="capture-actions">
@@ -476,7 +597,60 @@ export function CapturesPage() {
               </button>
               <button
                 className="button secondary"
-                disabled={!d.confirmed || !d.title.trim() || !d.keyword.trim() || busy}
+                disabled={busy || aiBusy}
+                onClick={() => setDeletingDraft(d.id)}
+              >
+                추출 글감 삭제
+              </button>
+              {deletingDraft === d.id && (
+                <div>
+                  <p>
+                    이 추출 글감만 삭제합니다. 원본 이미지와 이미 연결한 업무 글감은 유지됩니다.
+                  </p>
+                  <button
+                    className="button secondary"
+                    disabled={busy || aiBusy}
+                    onClick={() =>
+                      action(() => {
+                        save({ ...data, drafts: data.drafts.filter((row) => row.id !== d.id) })
+                        setDeletingDraft(null)
+                        if (editing?.id === d.id) setEditing(null)
+                      })
+                    }
+                  >
+                    추출 글감 삭제 확인
+                  </button>
+                  <button className="button secondary" onClick={() => setDeletingDraft(null)}>
+                    삭제 취소
+                  </button>
+                </div>
+              )}
+              <button
+                className="button secondary"
+                disabled={
+                  d.confirmed ||
+                  !d.title.trim() ||
+                  !d.keyword.trim() ||
+                  (d.mode === 'AI' && !d.imageIds.length) ||
+                  busy ||
+                  aiBusy
+                }
+                onClick={() =>
+                  action(() =>
+                    save({
+                      ...data,
+                      drafts: data.drafts.map((row) =>
+                        row.id === d.id ? { ...row, confirmed: true } : row,
+                      ),
+                    }),
+                  )
+                }
+              >
+                원본 대조 후 개별 승인
+              </button>
+              <button
+                className="button secondary"
+                disabled={!d.confirmed || !d.title.trim() || !d.keyword.trim() || busy || aiBusy}
                 onClick={async () => {
                   setBusy(true)
                   try {

@@ -18,6 +18,7 @@ export async function handleProtected(
   query: (keyword: unknown) => Promise<SearchAdResponse>,
   verify = verifyAccess,
   usage?: () => Promise<unknown>,
+  ai?: () => Promise<Response>,
 ) {
   const url = new URL(request.url)
   // Pages production/preview hosts are never an alternate entry point, even with a valid JWT.
@@ -30,6 +31,8 @@ export async function handleProtected(
   } catch {
     return failure(401, 'AUTH', '관리자 인증이 필요합니다. 로그인 후 다시 시도하세요.')
   }
+  if (url.pathname.startsWith('/api/ai/'))
+    return ai ? ai() : failure(503, 'DISABLED', 'AI 판독 미연결')
   if (url.pathname.startsWith('/api/')) {
     if (!['/api/searchad/keyword', '/api/searchad/usage'].includes(url.pathname))
       return failure(404, 'NOT_FOUND', '지원하지 않는 API입니다.')

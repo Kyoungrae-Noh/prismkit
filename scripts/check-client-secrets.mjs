@@ -11,7 +11,14 @@ const cloudflare = existsSync('.env.cloudflare')
   : {}
 const protectedValues = [
   marker,
-  ...['NAVER_SEARCHAD_API_KEY', 'NAVER_SEARCHAD_SECRET_KEY', 'NAVER_SEARCHAD_CUSTOMER_ID']
+  ...[
+    'NAVER_SEARCHAD_API_KEY',
+    'NAVER_SEARCHAD_SECRET_KEY',
+    'NAVER_SEARCHAD_CUSTOMER_ID',
+    'OPENAI_API_KEY',
+    'ANTHROPIC_API_KEY',
+    'GEMINI_API_KEY',
+  ]
     .map((name) => process.env[name] || local[name])
     .filter(Boolean),
   ...[process.env.CLOUDFLARE_API_TOKEN || cloudflare.CLOUDFLARE_API_TOKEN].filter(Boolean),
@@ -20,6 +27,7 @@ const env = {
   ...process.env,
   NAVER_SEARCHAD_SECRET_KEY: marker,
   NAVER_API_HUB_CLIENT_SECRET: marker,
+  OPENAI_API_KEY: marker,
 }
 const build = (extra = {}) =>
   spawnSync(process.execPath, ['node_modules/vite/bin/vite.js', 'build', '--outDir', outDir], {

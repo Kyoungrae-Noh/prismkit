@@ -1,3 +1,4 @@
+import { AI_MODEL, AI_PROVIDER, boundedText, objectKeys, type AIResult } from './ai-contract'
 import { categories, type Category } from './models'
 import { normalizeKeyword } from './candidates'
 import type { Count } from './research'
@@ -13,6 +14,14 @@ export interface CaptureImage {
   type: string
   size: number
   addedAt: string
+  analysis?: {
+    status: 'running' | 'success' | 'failed'
+    provider: string
+    model: string
+    at: string
+    message: string
+    reservedUsd: number | null
+  }
 }
 export interface CaptureDraft {
   id: string
@@ -32,6 +41,16 @@ export interface CaptureDraft {
   timeliness: string
   reviewman: string
   monetization: string
+  ai?: {
+    provider: string
+    model: string
+    at: string
+    edited: boolean
+    evidence: string
+    sourceEvidence: string
+    dateEvidence: string
+    keywords: string[]
+  }
 }
 export interface RankingSettings {
   min: string
@@ -109,7 +128,7 @@ function text(value: unknown, max: number) {
 export function validateDraft(d: CaptureDraft) {
   fields(
     d,
-    'id imageIds title topic keyword source publishedDate summary intent category uncertain confirmed mode ideaId timeliness reviewman monetization',
+    'id imageIds title topic keyword source publishedDate summary intent category uncertain confirmed mode ideaId timeliness reviewman monetization ai',
   )
   text(d.id, 100)
   if (!d.id) throw new Error('글감 ID가 필요합니다.')
@@ -142,6 +161,23 @@ export function validateDraft(d: CaptureDraft) {
       d.publishedDate > new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10))
   )
     throw new Error('확인 가능한 게시 날짜만 입력하세요.')
+  if (d.ai !== undefined) {
+    objectKeys(d.ai, 'provider model at edited evidence sourceEvidence dateEvidence keywords')
+    boundedText(d.ai.at, 40)
+    if (
+      d.mode !== 'AI' ||
+      d.ai.provider !== AI_PROVIDER ||
+      d.ai.model !== AI_MODEL ||
+      !Number.isFinite(Date.parse(d.ai.at)) ||
+      typeof d.ai.edited !== 'boolean' ||
+      !Array.isArray(d.ai.keywords) ||
+      d.ai.keywords.length > 10
+    )
+      throw new Error('AI 판독 기록 오류')
+    for (const text of [d.ai.evidence, d.ai.sourceEvidence, d.ai.dateEvidence])
+      boundedText(text, 500)
+    d.ai.keywords.forEach((k) => boundedText(k, 60))
+  }
   return d
 }
 export function validateCaptures(d: CaptureData): CaptureData {
@@ -155,7 +191,21 @@ export function validateCaptures(d: CaptureData): CaptureData {
   )
     throw new Error('캡처는 최대 20장, 글감은 최대 200개입니다.')
   for (const i of d.images) {
-    fields(i, 'id name type size addedAt')
+    fields(i, 'id name type size addedAt analysis')
+    if (i.analysis !== undefined) {
+      objectKeys(i.analysis, 'status provider model at message reservedUsd')
+      const a = i.analysis
+      boundedText(a.at, 40)
+      if (
+        !['running', 'success', 'failed'].includes(a.status) ||
+        a.provider !== AI_PROVIDER ||
+        a.model !== AI_MODEL ||
+        !Number.isFinite(Date.parse(a.at)) ||
+        !(a.reservedUsd === null || a.reservedUsd === 0.02)
+      )
+        throw new Error('AI 이미지 판독 기록 오류')
+      boundedText(a.message, 500)
+    }
     text(i.name, 200)
     if (
       !/^[a-f0-9]{64}$/.test(i.id) ||
@@ -257,4 +307,35 @@ export function parseExtraction(value: unknown, imageIds: string[]): CaptureDraf
       throw new Error('AI 결과의 원본 연결을 확인하세요.')
     return d
   })
+}
+
+/** Keep every item unapproved; inferred AI text never becomes numeric search evidence. */
+export function draftsFromAI(result: AIResult): CaptureDraft[] {
+  return result.items
+    .filter((i) => !i.advertisement && i.title.trim())
+    .map((i) =>
+      validateDraft({
+        ...newDraft([result.imageId]),
+        mode: 'AI',
+        title: i.title,
+        topic: i.topic,
+        keyword: i.keywords[0] ?? '',
+        category: i.category,
+        source: i.source,
+        publishedDate: i.publishedDate,
+        summary: i.summary,
+        intent: i.intent,
+        uncertain: i.uncertain || 'AI 판독: 원본 대조 필요',
+        ai: {
+          provider: result.provider,
+          model: result.model,
+          at: result.at,
+          edited: false,
+          evidence: i.evidence,
+          sourceEvidence: i.sourceEvidence,
+          dateEvidence: i.dateEvidence,
+          keywords: i.keywords,
+        },
+      }),
+    )
 }

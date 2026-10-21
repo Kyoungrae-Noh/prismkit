@@ -1,7 +1,8 @@
 import { handleProtected, failure } from '../edge/security.ts'
-export const onRequest: PagesFunction<Omit<PagesEnv, 'SEARCHAD'> & Pick<Env, 'SEARCHAD'>> = async (
-  context,
-) => {
+import { aiRoute } from '../edge/ai-route.ts'
+export const onRequest: PagesFunction<
+  Omit<PagesEnv, 'SEARCHAD'> & Pick<Env, 'SEARCHAD'> & { AI_ENABLED?: string }
+> = async (context) => {
   try {
     let upstream: Response | undefined
     const response = await handleProtected(
@@ -26,6 +27,10 @@ export const onRequest: PagesFunction<Omit<PagesEnv, 'SEARCHAD'> & Pick<Env, 'SE
         if (!upstream.ok) throw new Error('Budget unavailable')
         return await upstream.json()
       },
+      () =>
+        aiRoute(context.request, context.env.AI_ENABLED === 'true', () =>
+          context.env.SEARCHAD.get(context.env.SEARCHAD.idFromName('prismkit-ai-v1')),
+        ),
     )
     return upstream && !upstream.ok ? upstream : response
   } catch {
