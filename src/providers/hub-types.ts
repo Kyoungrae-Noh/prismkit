@@ -11,6 +11,7 @@ export const hubLabels: Record<HubApi, string> = {
 export interface HubRequest {
   api: HubApi
   query: string
+  display?: number
   sort?: 'sim' | 'date'
   startDate?: string
   endDate?: string

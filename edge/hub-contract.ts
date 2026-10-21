@@ -62,6 +62,7 @@ export function validateHubRequest(input: unknown, now = Date.now()): HubRequest
           'category',
           'groups',
           'shoppingScope',
+          'display',
         ].includes(k),
     ) ||
     !hubApis.includes(v.api as HubRequest['api']) ||
@@ -69,6 +70,11 @@ export function validateHubRequest(input: unknown, now = Date.now()): HubRequest
     !v.query.trim() ||
     v.query.length > 100 ||
     /[\u0000-\u001f]/.test(v.query) ||
+    (v.display !== undefined &&
+      (!Number.isInteger(v.display) ||
+        Number(v.display) < 1 ||
+        Number(v.display) > 100 ||
+        ['trend', 'shopping'].includes(String(v.api)))) ||
     (v.sort !== undefined && !['sim', 'date'].includes(String(v.sort))) ||
     (v.device !== undefined && !['all', 'pc', 'mo'].includes(String(v.device))) ||
     (v.shoppingScope !== undefined && !['category', 'keyword'].includes(String(v.shoppingScope)))
@@ -100,6 +106,7 @@ export function validateHubRequest(input: unknown, now = Date.now()): HubRequest
   return {
     api: v.api as HubRequest['api'],
     query: v.query.trim(),
+    ...(v.display !== undefined ? { display: Number(v.display) } : {}),
     ...(v.sort !== undefined ? { sort: v.sort as HubRequest['sort'] } : {}),
     ...(v.device !== undefined ? { device: v.device as HubRequest['device'] } : {}),
     ...(v.startDate !== undefined ? { startDate: String(v.startDate) } : {}),
@@ -118,7 +125,7 @@ export function hubWireRequest(r: HubRequest) {
   if (r.api !== 'trend' && r.api !== 'shopping') {
     endpoint.search = new URLSearchParams({
       query: r.query,
-      display: '10',
+      display: String(r.display ?? 10),
       start: '1',
       sort: r.sort ?? 'sim',
       format: 'json',
@@ -205,7 +212,12 @@ export function normalizeHub(raw: unknown, r: HubRequest, time: string): HubResu
     return result
   }
   result.total = count(v.total)
-  if (v.start !== 1 || !Array.isArray(v.items) || v.items.length > 10 || count(v.display) > 10)
+  if (
+    v.start !== 1 ||
+    !Array.isArray(v.items) ||
+    v.items.length > (r.display ?? 10) ||
+    count(v.display) > (r.display ?? 10)
+  )
     throw schema()
   result.items = v.items.map((value, i) => {
     const x = object(value)

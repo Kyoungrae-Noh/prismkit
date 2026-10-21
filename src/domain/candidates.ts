@@ -39,7 +39,13 @@ export interface IntentClassifier {
   classify(keyword: string): Promise<IntentResult>
 }
 export interface Candidate extends CandidateInput {
-  discovery?: { title: string; intent: string; sources: DraftSource[] }
+  discovery?: {
+    title: string
+    intent: string
+    sources: DraftSource[]
+    mainKeyword?: string
+    detailKeyword?: string
+  }
   key: string
   originals: CandidateInput[]
   intent: Intent

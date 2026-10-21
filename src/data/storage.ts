@@ -8,6 +8,7 @@ export const DATA_KEYS = [
   'prismkit.publishing.v1',
   'prismkit.captures.v1',
   'prismkit.manuscripts.v1',
+  'prismkit.discovery.v1',
 ] as const
 export type StoragePort = Pick<Storage, 'getItem' | 'setItem'>
 export interface RestoreEnvelope {
@@ -22,6 +23,7 @@ export function readEnvelope(storage: StoragePort): RestoreEnvelope | null {
   const value = JSON.parse(raw) as RestoreEnvelope
   // Phase 3A envelopes predate captures. Extend only the in-memory view; never rewrite on read.
   for (const part of [value?.datasets, value?.previous]) {
+    if (part && !Object.hasOwn(part, 'prismkit.discovery.v1')) part['prismkit.discovery.v1'] = null
     if (part && !Object.hasOwn(part, 'prismkit.manuscripts.v1'))
       part['prismkit.manuscripts.v1'] = null
     if (part && !Object.hasOwn(part, 'prismkit.captures.v1')) part['prismkit.captures.v1'] = null

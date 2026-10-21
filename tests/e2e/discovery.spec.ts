@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { demoHub } from '../../src/providers/hub-client'
+import { mockAnalysisBudget } from './analysis-mocks'
 
 test('mock-authorized discovery hands selected evidence to manuscripts without generating or claiming official sources', async ({
   page,
@@ -31,6 +32,7 @@ test('mock-authorized discovery hands selected evidence to manuscripts without g
     searchadCalls++
     return route.fulfill({ status: 429, json: { error: { message: 'mock budget limit' } } })
   })
+  await mockAnalysisBudget(page)
   await page.route('**/api/ai/**', (route) => {
     generated++
     return route.abort()

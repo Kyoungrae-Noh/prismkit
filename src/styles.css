@@ -3476,3 +3476,35 @@ textarea {
 .integrated-detail .table-scroll { margin: 10px 0; }
 @media(max-width:900px) { .analysis-summary { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media(max-width:400px) { .analysis-summary { grid-template-columns: 1fr; } }
+/* Phase 3I-3 comparison table becomes a compact card list on small screens. */
+.quick-actions { margin-top: 20px; }
+.discovery-actions label { display: flex; gap: 8px; align-items: center; }
+.discovery-actions input[type="number"] { width: 76px; }
+.discovery-panel .dual-table { table-layout: fixed; white-space: normal; min-width: 0; }
+.discovery-panel .dual-table th, .discovery-panel .dual-table td { padding: 10px 6px; font-size: 12px; min-width: 0; overflow-wrap: anywhere; }
+.discovery-panel .dual-table th { font-size: 10px; }
+.dual-table th:first-child { width: 18%; }
+.dual-table th:nth-child(2) { width: 7%; }
+.dual-table th:nth-child(3) { width: 12%; }
+.dual-table th:nth-child(4) { width: 13%; }
+.dual-table th:nth-child(n+5):nth-child(-n+8) { width: 7%; }
+.dual-table th:nth-child(9) { width: 12%; }
+.dual-table th:last-child { width: 10%; }
+.quick-actions > label:last-child { white-space: nowrap; }
+.dual-table td { min-width: 75px; vertical-align: top; }
+.dual-table td:first-child { min-width: 170px; }
+.dual-table td:nth-child(3), .dual-table td:nth-child(4) { min-width: 130px; }
+.dual-table small, .dual-detail small { display: block; margin-top: 5px; color: #607169; font-size: 11px; }
+.dual-detail { margin-top: 20px; padding: 16px; background: #f6f8f4; border-radius: 12px; }
+.budget-summary { padding: 10px; background: #f6f8f4; font-size: 12px; }
+@media (max-width: 900px) {
+  .dual-table, .dual-table tbody { display: block; min-width: 0; width: 100%; }
+  .dual-table thead { display: none; }
+  .dual-table tbody tr { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; padding: 14px; margin: 12px 0; border: 1px solid #dce4d8; border-radius: 12px; background: #fff; }
+  .dual-table td, .dual-table td:first-child, .dual-table td:nth-child(3), .dual-table td:nth-child(4), .dual-table td:last-child { display: block; min-width: 0; width: auto; padding: 0; border: 0; overflow-wrap: anywhere; }
+  .discovery-panel .dual-table td { padding: 0; }
+  .dual-table td::before { content: attr(data-label); display: block; color: #607169; font-size: 11px; margin-bottom: 5px; }
+  .dual-table td:first-child, .dual-table td:nth-child(2), .dual-table td:nth-last-child(2), .dual-table td:last-child { grid-column: 1 / -1; }
+  .dual-table td:first-child input { margin-right: 8px; }
+  .dual-table td:last-child .discovery-actions { flex-direction: row; align-items: center; }
+}

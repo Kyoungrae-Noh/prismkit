@@ -110,6 +110,8 @@ it('partial failure retains previous successful data with failure/time labels an
   const [c] = groupDiscovery([await live({ api: 'kin', query: '여행 준비물' })], [])
   expect(evaluatePublication(c, a).components[0].value).toBeNull()
   expect(a.results.find((r) => r.api === 'cafe')?.total).toBe(180)
+  a.states!.searchad!.state = '미조회'
+  expect(evaluatePublication(c, a).components[0].value).toBeNull()
 })
 it('trend requires consecutive comparable windows through the requested endpoint', async () => {
   const series = (await live({ api: 'trend', query: '여행', ...dates })).series[0]

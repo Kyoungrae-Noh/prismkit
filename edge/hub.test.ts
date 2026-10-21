@@ -430,3 +430,23 @@ test('HUB routes require verified Access, same-origin headers, exact methods and
   assert.equal((await hubRoute(req, rpc)).status, 200)
   assert.equal(calls, 1)
 })
+
+test('collection display is bounded, changes cache identity and accepts only the requested number of results', () => {
+  for (const display of [0, 101, 1.5, '20'])
+    assert.throws(() => validateHubRequest({ api: 'kin', query: '주제', display }, time))
+  const r = validateHubRequest({ api: 'kin', query: '주제', display: 30 }, time)
+  assert.equal(new URL(hubWireRequest(r).url).searchParams.get('display'), '30')
+  const data = {
+    total: 100,
+    start: 1,
+    display: 30,
+    items: Array.from({ length: 30 }, () => ({
+      title: '질문',
+      link: 'https://example.com/post',
+      description: '요약',
+    })),
+  }
+  assert.equal(normalizeHub(data, r, new Date(time).toISOString()).items.length, 30)
+  assert.throws(() => normalizeHub(data, { ...r, display: 10 }, new Date(time).toISOString()))
+  assert.throws(() => validateHubRequest({ ...request('trend'), display: 10 }, time))
+})

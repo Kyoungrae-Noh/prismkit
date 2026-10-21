@@ -18,6 +18,12 @@ import { normalizeKeyword } from '../domain/candidates'
 import { CAPTURE_KEY, emptyCaptures, validateCaptures, type CaptureData } from '../domain/captures'
 import { createCaptureStore } from './capture-store'
 import { imageVault, blobDataUrl, decodeCapture, type ImageVault } from './capture-images'
+import {
+  DISCOVERY_KEY,
+  createDiscoveryStore,
+  validateDiscovery,
+  type DiscoveryWorkspace,
+} from './discovery-store'
 export const BACKUP_MAX = 64 * 1024 * 1024
 export interface Backup {
   format: 'prismkit-workspace'
@@ -30,6 +36,7 @@ export interface Backup {
   captures?: CaptureData
   manuscripts?: Manuscript[]
   captureFiles?: Record<string, string>
+  discovery?: DiscoveryWorkspace
 }
 function fields(value: unknown, allowed: string) {
   if (
@@ -45,9 +52,10 @@ function fields(value: unknown, allowed: string) {
 function shapes(b: Backup) {
   fields(
     b,
-    'format version exportedAt ideas research candidates publishing captures captureFiles manuscripts',
+    'format version exportedAt ideas research candidates publishing captures captureFiles manuscripts discovery',
   )
   if (b.manuscripts !== undefined) validateManuscripts(b.manuscripts)
+  if (b.discovery !== undefined) validateDiscovery(b.discovery)
   if (b.version === 1 && (b.captures !== undefined || b.captureFiles !== undefined))
     throw new Error('캡처는 version 2 백업이 필요합니다.')
   for (const x of b.ideas) fields(x, 'id title keyword category status memo createdAt updatedAt')
@@ -66,7 +74,7 @@ function shapes(b: Backup) {
     )
     if (x.documents) fields(x.documents, 'count source checkedDate scope')
     if (x.discovery) {
-      fields(x.discovery, 'title intent sources')
+      fields(x.discovery, 'title intent sources mainKeyword detailKeyword')
       for (const source of x.discovery.sources)
         fields(source, 'id title url excerpt checkedDate kind')
     }
@@ -111,6 +119,7 @@ function datasets(b: Backup) {
     [PUBLISHING_KEY]: JSON.stringify(b.publishing),
     [DRAFT_KEY]: b.manuscripts ? JSON.stringify(b.manuscripts) : null,
     [CAPTURE_KEY]: b.captures ? JSON.stringify(b.captures) : null,
+    [DISCOVERY_KEY]: b.discovery ? JSON.stringify(b.discovery) : null,
   }
 }
 function memory(raw: Record<string, string | null>): StoragePort {
@@ -137,6 +146,7 @@ export async function exportWorkspace(
     captures: createCaptureStore(port).read(),
     captureFiles: {},
     manuscripts: createManuscriptStore(port).read(),
+    discovery: createDiscoveryStore(port).read(),
   }
   for (const meta of b.captures!.images)
     b.captureFiles![meta.id] = await blobDataUrl(await vault.get(meta.id))
@@ -216,6 +226,7 @@ export function backupCounts(b: Backup) {
     추출글감: b.captures?.drafts.length ?? 0,
     원고: b.manuscripts?.length ?? 0,
     추천기록: b.captures?.report?.candidateIds.length ?? 0,
+    발굴목록: b.discovery?.rows.length ?? 0,
   }
 }
 export function compareBackups(current: Backup, incoming: Backup) {
@@ -226,8 +237,30 @@ export function compareBackups(current: Backup, incoming: Backup) {
   const pairs = [
     [current.manuscripts ?? [], incoming.manuscripts ?? current.manuscripts ?? []],
     [current.ideas, incoming.ideas],
+    [
+      current.discovery?.settings ? [{ id: 'settings', value: current.discovery.settings }] : [],
+      (incoming.discovery ?? current.discovery)?.settings
+        ? [{ id: 'settings', value: (incoming.discovery ?? current.discovery)!.settings }]
+        : [],
+    ],
     [current.research, incoming.research],
     [current.candidates, incoming.candidates],
+    [
+      (current.discovery?.rows ?? []).map((r) => ({ ...r, id: r.key })),
+      (incoming.discovery?.rows ?? current.discovery?.rows ?? []).map((r) => ({ ...r, id: r.key })),
+    ],
+    [
+      Object.entries(current.discovery?.metrics ?? {}).map(([id, value]) => ({ id, value })),
+      Object.entries(incoming.discovery?.metrics ?? current.discovery?.metrics ?? {}).map(
+        ([id, value]) => ({ id, value }),
+      ),
+    ],
+    [
+      Object.entries(current.discovery?.analyses ?? {}).map(([id, value]) => ({ id, value })),
+      Object.entries(incoming.discovery?.analyses ?? current.discovery?.analyses ?? {}).map(
+        ([id, value]) => ({ id, value }),
+      ),
+    ],
     [current.publishing.analyses, incoming.publishing.analyses],
     [current.publishing.publications, incoming.publishing.publications],
     [current.captures?.images ?? [], incoming.captures?.images ?? []],
@@ -270,6 +303,7 @@ export async function restoreWorkspace(
     throw new Error('미리보기 이후 자료가 변경되었습니다. 다시 비교하세요.')
   const next = datasets(checked)
   if (checked.manuscripts === undefined) next[DRAFT_KEY] = previous[DRAFT_KEY]
+  if (checked.discovery === undefined) next[DISCOVERY_KEY] = previous[DISCOVERY_KEY]
   if (checked.version === 1) {
     const kept = previous[CAPTURE_KEY]
     const legacy = kept ? validateCaptures(JSON.parse(kept)) : emptyCaptures()

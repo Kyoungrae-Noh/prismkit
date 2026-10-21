@@ -147,13 +147,25 @@ export async function collectDiscovery(
   query: HubQuery,
   period: Pick<HubRequest, 'startDate' | 'endDate'>,
   category = '',
+  target?: number,
 ) {
+  if (target !== undefined && (!Number.isInteger(target) || target < 1 || target > 100))
+    throw Error('수집 개수는 1~100개로 입력하세요.')
   const results: HubResult[] = [],
     errors: string[] = []
   for (const seed of seeds.slice(0, 2))
     for (const api of ['kin', 'news'] as const) {
       try {
-        results.push(await query({ api, query: seed, sort: 'date' }))
+        results.push(
+          await query({
+            api,
+            query: seed,
+            sort: 'date',
+            ...(target
+              ? { display: Math.ceil(target / Math.max(1, seeds.slice(0, 2).length * 2)) }
+              : {}),
+          }),
+        )
       } catch (e) {
         errors.push(`${api}: ${(e as Error).message}`)
       }
@@ -180,7 +192,12 @@ export async function analyzeDiscovery(
   searchad: (keyword: string) => Promise<SearchAdResponse>,
   period: Pick<HubRequest, 'startDate' | 'endDate' | 'device'>,
   category = '',
-  options: { previous?: DiscoveryAnalysis; onProgress?: (value: DiscoveryAnalysis) => void } = {},
+  options: {
+    previous?: DiscoveryAnalysis
+    onProgress?: (value: DiscoveryAnalysis) => void
+    reuse?: boolean
+    apis?: ('blog' | 'cafe' | 'trend' | 'shopping')[]
+  } = {},
 ): Promise<DiscoveryAnalysis> {
   const previous = options.previous?.keyword === keyword ? options.previous : undefined
   const result: DiscoveryAnalysis = {
@@ -206,9 +223,20 @@ export async function analyzeDiscovery(
       ]),
     ),
   }
+  if (options.reuse && previous?.states) result.states = { ...result.states, ...previous.states }
   const report = () => options.onProgress?.(structuredClone(result))
   report()
   const volume = async () => {
+    if (
+      options.reuse &&
+      previous?.states?.searchad &&
+      previous.states.searchad.state !== '미조회'
+    ) {
+      if (['LIVE 확인', '캐시'].includes(previous.states.searchad.state))
+        result.states!.searchad = { ...previous.states.searchad, state: '캐시', cached: true }
+      report()
+      return
+    }
     try {
       const response = await searchad(keyword)
       result.volume =
@@ -234,7 +262,7 @@ export async function analyzeDiscovery(
       const message = (e as Error).message
       result.errors.push(`검색량: ${message}`)
       result.states!.searchad = {
-        state: '조회 실패',
+        state: e instanceof Error && 'deferred' in e ? '미조회' : '조회 실패',
         at: result.volumeAt,
         message,
         retained: !!result.volume,
@@ -243,6 +271,17 @@ export async function analyzeDiscovery(
     report()
   }
   const hub = async (api: 'blog' | 'cafe' | 'trend' | 'shopping') => {
+    if (
+      options.reuse &&
+      previous?.states?.[api] &&
+      previous.states[api]!.state !== '미조회' &&
+      (result.results.some((r) => r.api === api) || previous.states[api]!.state === '조회 실패')
+    ) {
+      if (['LIVE 확인', '캐시'].includes(previous.states[api]!.state))
+        result.states![api] = { ...previous.states[api]!, state: '캐시', cached: true }
+      report()
+      return
+    }
     try {
       const r = await query({
         api,
@@ -273,7 +312,7 @@ export async function analyzeDiscovery(
         old = result.results.find((r) => r.api === api)
       result.errors.push(`${api}: ${message}`)
       result.states![api] = {
-        state: '조회 실패',
+        state: e instanceof Error && 'deferred' in e ? '미조회' : '조회 실패',
         at: old?.collectedAt ?? null,
         message,
         retained: !!old,
@@ -283,9 +322,9 @@ export async function analyzeDiscovery(
   }
   await Promise.allSettled([
     volume(),
-    ...(['blog', 'cafe', 'trend', ...(category ? ['shopping'] : [])] as const).map((api) =>
-      hub(api as 'blog' | 'cafe' | 'trend' | 'shopping'),
-    ),
+    ...(
+      options.apis ?? (['blog', 'cafe', 'trend', ...(category ? ['shopping'] : [])] as const)
+    ).map((api) => hub(api as 'blog' | 'cafe' | 'trend' | 'shopping')),
   ])
   result.results.sort(
     (a, b) =>
@@ -294,8 +333,22 @@ export async function analyzeDiscovery(
   )
   return result
 }
-export function discoveryRecommendation(c: DiscoveryCandidate, a?: DiscoveryAnalysis) {
+export function discoveryRecommendation(
+  c: DiscoveryCandidate,
+  a?: DiscoveryAnalysis,
+  main?: DiscoveryAnalysis,
+) {
   const evaluation = evaluatePublication(c, a)
+  if (
+    main &&
+    (typeof main.volume?.total !== 'number' ||
+      ['조회 실패', '미조회'].includes(main.states?.searchad?.state ?? '') ||
+      !main.results.some((r) => r.api === 'blog' && typeof r.total === 'number') ||
+      ['조회 실패', '미조회'].includes(main.states?.blog?.state ?? ''))
+  ) {
+    evaluation.missing.push('메인 키워드 시장 규모·블로그 근거')
+    if (c.mode !== 'DEMO' && !c.duplicate) evaluation.status = '추가 조사 필요'
+  }
   const blog = a?.results.find((r) => r.api === 'blog' && r.mode === c.mode)?.total
   const cafe = a?.results.find((r) => r.api === 'cafe' && r.mode === c.mode)?.total
   return {
@@ -316,8 +369,12 @@ export function discoveryRecommendation(c: DiscoveryCandidate, a?: DiscoveryAnal
     ],
   }
 }
-export function discoveryToCandidate(c: DiscoveryCandidate, a?: DiscoveryAnalysis): Candidate {
-  const recommendation = discoveryRecommendation(c, a)
+export function discoveryToCandidate(
+  c: DiscoveryCandidate,
+  a?: DiscoveryAnalysis,
+  main?: DiscoveryAnalysis,
+): Candidate {
+  const recommendation = discoveryRecommendation(c, a, main)
   const candidate = analyzeCandidates(
     [
       {
@@ -336,6 +393,9 @@ export function discoveryToCandidate(c: DiscoveryCandidate, a?: DiscoveryAnalysi
     ...candidate,
     discovery: {
       title: c.title,
+      ...(main?.keyword && a?.keyword
+        ? { mainKeyword: main.keyword, detailKeyword: a.keyword }
+        : {}),
       intent: recommendation.intent,
       sources:
         a?.review?.official && recommendation.officialChecked
@@ -355,6 +415,18 @@ export function discoveryToCandidate(c: DiscoveryCandidate, a?: DiscoveryAnalysi
     intent: classifyIntent(c.title).intent,
     reasons: [
       recommendation.status,
+      ...(main
+        ? [
+            `메인 키워드 (시장 규모): ${main.keyword}; PC ${main.volume?.pc ?? '미확인'} / 모바일 ${main.volume?.mobile ?? '미확인'} / 합계 ${main.volume?.total ?? '미확인'}; 검색광고 ${main.volumeAt ?? '미조회'}`,
+            `메인 API 결과 수: 블로그 ${main.results.find((r) => r.api === 'blog')?.total ?? '미확인'} / 카페 ${main.results.find((r) => r.api === 'cafe')?.total ?? '미확인'}; ${Object.entries(
+              main.states ?? {},
+            )
+              .map(([api, s]) => `${api} ${s.state} ${s.at ?? '미조회'}`)
+              .join('; ')}`,
+            `세부 키워드 (원고 검색 의도 우선): ${a?.keyword}; 세부 검색량 ${a?.volume?.total ?? '미확인'}; 메인 수치를 대신 사용하지 않음`,
+            '메인·세부 키워드는 원본 제목 기반 규칙 추론. 검색량·경쟁 결과 수는 편집 판단용 메타데이터이며 본문에 억지로 삽입하지 않음.',
+          ]
+        : []),
       ...recommendation.reasons.slice(0, 8),
       `미확인: ${recommendation.missing.join(', ')}`,
       ...(a?.review?.official

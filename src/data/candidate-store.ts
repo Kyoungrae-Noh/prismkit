@@ -42,6 +42,9 @@ function validInput(value: unknown): boolean {
 }
 function validCandidate(row: Candidate) {
   if (row.discovery !== undefined) {
+    for (const key of [row.discovery.mainKeyword, row.discovery.detailKeyword])
+      if (key !== undefined && (typeof key !== 'string' || !key.trim() || key.length > 100))
+        return false
     try {
       validateBrief({
         candidateId: 'validation',

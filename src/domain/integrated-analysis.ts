@@ -161,7 +161,8 @@ export function evaluatePublication(c: DiscoveryCandidate, a?: DiscoveryAnalysis
   const trend = live.find((r) => r.api === 'trend')
   const trendInfo = trendAssessment(trend?.series[0], trend?.endDate)
   const review = a?.review ?? emptyReview
-  const failed = (api: AnalysisApi) => a?.states?.[api]?.state === '조회 실패'
+  const failed = (api: AnalysisApi) =>
+    ['조회 실패', '미조회'].includes(a?.states?.[api]?.state ?? '')
   const volume =
     !failed('searchad') &&
     a?.volume &&

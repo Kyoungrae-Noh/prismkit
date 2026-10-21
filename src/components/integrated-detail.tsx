@@ -16,6 +16,7 @@ const labels: Record<AnalysisApi, string> = {
 export function IntegratedDetail({
   candidate: c,
   analysis: a,
+  mainAnalysis,
   busy,
   expectedCalls,
   onAnalyze,
@@ -24,6 +25,7 @@ export function IntegratedDetail({
 }: {
   candidate: DiscoveryCandidate
   analysis?: DiscoveryAnalysis
+  mainAnalysis?: DiscoveryAnalysis
   busy: boolean
   expectedCalls: number
   onAnalyze(): void
@@ -33,7 +35,7 @@ export function IntegratedDetail({
   const [officialUrl, setOfficialUrl] = useState(''),
     [officialNote, setOfficialNote] = useState(''),
     [notice, setNotice] = useState('')
-  const rec = discoveryRecommendation(c, a),
+  const rec = discoveryRecommendation(c, a, mainAnalysis),
     review = a?.review ?? emptyReview
   function confirmOfficial() {
     try {
@@ -123,7 +125,7 @@ export function IntegratedDetail({
         예상 외부 호출:{' '}
         {c.mode === 'DEMO'
           ? '0회'
-          : `최대 ${expectedCalls}회 (검색광고 1회 포함); 캐시 적중 시 감소`}
+          : `최대 ${expectedCalls}회 (검색광고 ${expectedCalls > 5 ? 2 : 1}회 포함); 캐시 적중 시 감소`}
         . 제목·요약 분석과 가중치 계산은 로컬 처리입니다.
       </p>
       <div className="discovery-actions">
