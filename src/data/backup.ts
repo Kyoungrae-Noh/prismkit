@@ -13,15 +13,20 @@ import type { Idea } from '../domain/models'
 import type { KeywordResearch } from '../domain/research'
 import type { PublishingData } from '../domain/publishing'
 import { normalizeKeyword } from '../domain/candidates'
-export const BACKUP_MAX = 8 * 1024 * 1024
+import { CAPTURE_KEY, emptyCaptures, validateCaptures, type CaptureData } from '../domain/captures'
+import { createCaptureStore } from './capture-store'
+import { imageVault, blobDataUrl, decodeCapture, type ImageVault } from './capture-images'
+export const BACKUP_MAX = 64 * 1024 * 1024
 export interface Backup {
   format: 'prismkit-workspace'
-  version: 1
+  version: 1 | 2
   exportedAt: string
   ideas: Idea[]
   research: KeywordResearch[]
   candidates: SavedCandidate[]
   publishing: PublishingData
+  captures?: CaptureData
+  captureFiles?: Record<string, string>
 }
 function fields(value: unknown, allowed: string) {
   if (
@@ -35,7 +40,9 @@ function fields(value: unknown, allowed: string) {
     )
 }
 function shapes(b: Backup) {
-  fields(b, 'format version exportedAt ideas research candidates publishing')
+  fields(b, 'format version exportedAt ideas research candidates publishing captures captureFiles')
+  if (b.version === 1 && (b.captures !== undefined || b.captureFiles !== undefined))
+    throw new Error('캡처는 version 2 백업이 필요합니다.')
   for (const x of b.ideas) fields(x, 'id title keyword category status memo createdAt updatedAt')
   for (const x of b.research)
     fields(
@@ -86,6 +93,7 @@ function datasets(b: Backup) {
     [RESEARCH_KEY]: JSON.stringify({ version: 1, records: b.research }),
     [CANDIDATE_KEY]: JSON.stringify({ version: 1, items: b.candidates }),
     [PUBLISHING_KEY]: JSON.stringify(b.publishing),
+    [CAPTURE_KEY]: b.captures ? JSON.stringify(b.captures) : null,
   }
 }
 function memory(raw: Record<string, string | null>): StoragePort {
@@ -96,17 +104,24 @@ function memory(raw: Record<string, string | null>): StoragePort {
     },
   }
 }
-export async function exportWorkspace(storage: StoragePort): Promise<Backup> {
+export async function exportWorkspace(
+  storage: StoragePort,
+  vault: ImageVault = imageVault,
+): Promise<Backup> {
   const port = memory(rawSnapshot(storage))
   const b: Backup = {
     format: 'prismkit-workspace',
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     ideas: await createLocalRepository(port).listIdeas(),
     research: await createResearchStore(port).listResearch(),
     candidates: createCandidateStore(port).list(),
     publishing: createPublishingStore(port).read(),
+    captures: createCaptureStore(port).read(),
+    captureFiles: {},
   }
+  for (const meta of b.captures!.images)
+    b.captureFiles![meta.id] = await blobDataUrl(await vault.get(meta.id))
   shapes(b)
   return b
 }
@@ -121,10 +136,14 @@ export function referenceIssues(b: Backup): string[] {
     if (!c || normalizeKeyword(c.candidate.keyword) !== normalizeKeyword(x.keyword))
       issues.push(`경쟁 자료의 후보 연결 불일치: ${x.candidateId}`)
   }
+  for (const d of b.captures?.drafts ?? [])
+    if (d.ideaId !== null && !ideas.has(d.ideaId)) issues.push(`캡처 글감 연결 없음: ${d.ideaId}`)
+  for (const id of b.captures?.report?.candidateIds ?? [])
+    if (!candidates.has(id)) issues.push(`추천 기록 후보 없음: ${id}`)
   return [...new Set(issues)]
 }
 export async function parseBackup(raw: string): Promise<Backup> {
-  if (raw.length * 2 > BACKUP_MAX) throw new Error('백업 용량 제한 8 MiB를 초과했습니다.')
+  if (raw.length * 2 > BACKUP_MAX) throw new Error('백업 용량 제한 64 MiB를 초과했습니다.')
   let b: Backup
   try {
     b = JSON.parse(raw)
@@ -134,7 +153,7 @@ export async function parseBackup(raw: string): Promise<Backup> {
   if (
     !b ||
     b.format !== 'prismkit-workspace' ||
-    b.version !== 1 ||
+    ![1, 2].includes(b.version) ||
     typeof b.exportedAt !== 'string' ||
     !Number.isFinite(Date.parse(b.exportedAt)) ||
     !Array.isArray(b.ideas) ||
@@ -149,6 +168,20 @@ export async function parseBackup(raw: string): Promise<Backup> {
   createCandidateStore(port).list()
   validatePublishing(b.publishing)
   shapes(b)
+  if (b.version === 2) {
+    validateCaptures(b.captures!)
+    if (
+      !b.captureFiles ||
+      typeof b.captureFiles !== 'object' ||
+      Array.isArray(b.captureFiles) ||
+      Object.keys(b.captureFiles).length !== b.captures!.images.length
+    )
+      throw new Error('캡처 원본 백업이 누락되었습니다.')
+    for (const meta of b.captures!.images) {
+      if (typeof b.captureFiles[meta.id] !== 'string') throw new Error('캡처 원본 누락')
+      await decodeCapture(b.captureFiles[meta.id], meta)
+    }
+  }
   const issues = referenceIssues(b)
   if (issues.length) throw new Error(`연결 무결성 검사 실패: ${issues.join(', ')}`)
   return b
@@ -161,6 +194,9 @@ export function backupCounts(b: Backup) {
     경쟁분석: b.publishing.analyses.length,
     발행이력: b.publishing.publications.length,
     캡처: b.publishing.analyses.reduce((n, x) => n + x.images.length, 0),
+    글감캡처: b.captures?.images.length ?? 0,
+    추출글감: b.captures?.drafts.length ?? 0,
+    추천기록: b.captures?.report?.candidateIds.length ?? 0,
   }
 }
 export function compareBackups(current: Backup, incoming: Backup) {
@@ -174,6 +210,12 @@ export function compareBackups(current: Backup, incoming: Backup) {
     [current.candidates, incoming.candidates],
     [current.publishing.analyses, incoming.publishing.analyses],
     [current.publishing.publications, incoming.publishing.publications],
+    [current.captures?.images ?? [], incoming.captures?.images ?? []],
+    [current.captures?.drafts ?? [], incoming.captures?.drafts ?? []],
+    [
+      current.captures?.report ? [{ id: 'recommendations', ...current.captures.report }] : [],
+      incoming.captures?.report ? [{ id: 'recommendations', ...incoming.captures.report }] : [],
+    ],
   ] as const
   for (const [old, next] of pairs) {
     const key = (x: { id?: string; candidateId?: string }) => x.id ?? x.candidateId!
@@ -189,14 +231,35 @@ export function compareBackups(current: Backup, incoming: Backup) {
   }
   return { same, changed, added, removed }
 }
-export async function restoreWorkspace(storage: StoragePort, incoming: Backup, expected: string) {
+export async function restoreWorkspace(
+  storage: StoragePort,
+  incoming: Backup,
+  expected: string,
+  vault: ImageVault = imageVault,
+) {
   const checked = await parseBackup(JSON.stringify(incoming))
   const previous = rawSnapshot(storage)
   if (JSON.stringify(previous) !== expected)
     throw new Error('미리보기 이후 자료가 변경되었습니다. 파일을 다시 선택해 비교하세요.')
+  // Stage immutable, content-addressed images first. Failed commits leave only safe, unreferenced blobs.
+  const entries = []
+  for (const meta of checked.captures?.images ?? [])
+    entries.push({ id: meta.id, blob: await decodeCapture(checked.captureFiles![meta.id], meta) })
+  await vault.put(entries)
+  if (JSON.stringify(rawSnapshot(storage)) !== expected)
+    throw new Error('미리보기 이후 자료가 변경되었습니다. 다시 비교하세요.')
+  const next = datasets(checked)
+  if (checked.version === 1) {
+    const kept = previous[CAPTURE_KEY]
+    const legacy = kept ? validateCaptures(JSON.parse(kept)) : emptyCaptures()
+    const issues = referenceIssues({ ...checked, captures: legacy })
+    if (issues.length)
+      throw new Error('구버전 백업이 현재 캡처 연결을 끊습니다. 전체 version 2 백업을 사용하세요.')
+    next[CAPTURE_KEY] = kept
+  }
   const envelope = {
     version: 1,
-    datasets: datasets(checked),
+    datasets: next,
     previous,
     restoredAt: new Date().toISOString(),
   }

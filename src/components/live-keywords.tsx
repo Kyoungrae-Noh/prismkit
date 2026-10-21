@@ -3,6 +3,7 @@ import { createSearchAdProvider } from '../providers/searchad-client'
 import type { SearchAdResponse } from '../providers/searchad-types'
 import type { Usage } from '../../server/searchad/budget'
 import { displayCount } from '../domain/research'
+import { readBudget } from '../providers/usage-client'
 const provider = createSearchAdProvider()
 export function LiveKeywords({
   onData,
@@ -24,6 +25,9 @@ export function LiveKeywords({
     [sort, setSort] = useState('total')
   const [usage, setUsage] = useState<Usage | null>(initialData?.usage ?? null)
   const [connection, setConnection] = useState(initialData ? '이전 성공 응답' : '확인 불가')
+  const [budgetBusy, setBudgetBusy] = useState(false)
+  const [budgetMessage, setBudgetMessage] = useState('')
+  const [budgetError, setBudgetError] = useState('')
   useEffect(() => {
     if (!usage) return
     const timer = window.setTimeout(
@@ -33,29 +37,24 @@ export function LiveKeywords({
     return () => clearTimeout(timer)
   }, [usage])
   async function readUsage() {
+    if (budgetBusy) return
+    setBudgetBusy(true)
+    setBudgetError('')
+    setBudgetMessage('예산 조회 중…')
     try {
-      const response = await fetch('/api/searchad/usage', {
-        headers: { 'X-Prismkit-Request': 'keyword-query' },
-        cache: 'no-store',
-        signal: AbortSignal.timeout(10000),
-      })
-      const value = await response.json()
-      if (
-        !response.ok ||
-        !Number.isSafeInteger(value.used) ||
-        value.used < 0 ||
-        !Number.isSafeInteger(value.remaining) ||
-        value.remaining < 0 ||
-        !Number.isSafeInteger(value.limit) ||
-        value.limit < 1 ||
-        value.limit > 30 ||
-        typeof value.blocked !== 'boolean' ||
-        !Number.isFinite(Date.parse(value.resetsAt))
-      )
-        throw new Error()
+      const value = await readBudget()
       setUsage(value)
-    } catch {
+      setBudgetMessage(
+        '예산 조회 성공 · ' +
+          new Date().toLocaleTimeString('ko-KR') +
+          ' · 네이버 API 연결 검증과 별개입니다.',
+      )
+    } catch (e) {
       setUsage(null)
+      setBudgetMessage('')
+      setBudgetError(e instanceof Error ? e.message : '예산 조회에 실패했습니다. 다시 시도하세요.')
+    } finally {
+      setBudgetBusy(false)
     }
   }
   async function submit(event: FormEvent) {
@@ -120,7 +119,7 @@ export function LiveKeywords({
       </p>
       <section aria-label="API 사용량">
         <p>
-          API 연결 상태: {connection} · 캐시 사용:{' '}
+          네이버 API 연결 상태 (마지막 검색량 조회): {connection} · 캐시 사용:{' '}
           {data ? (data.cached ? '예' : '아니요') : '확인 불가'}
         </p>
         <p>
@@ -146,15 +145,25 @@ export function LiveKeywords({
         {usage?.migration && (
           <p>기존 누적 사용량을 보존하는 전환일입니다. 다음 자정부터 새 일일 한도를 적용합니다.</p>
         )}
-        <button className="button secondary" onClick={() => void readUsage()}>
-          호출 예산 확인
+        <button className="button secondary" disabled={budgetBusy} onClick={() => void readUsage()}>
+          {budgetBusy ? '예산 조회 중…' : '호출 예산 확인'}
         </button>
+        {budgetMessage && <p role="status">{budgetMessage}</p>}
+        {budgetError && (
+          <p role="alert" aria-label="예산 조회 오류">
+            {budgetError}
+          </p>
+        )}
         <p className="form-note">
           예산 확인은 네이버를 호출하지 않습니다. 표시값은 마지막 서버 확인 시점의 값이며 남은
           횟수가 조회 성공을 보장하지 않습니다.
         </p>
       </section>
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p role="alert" aria-label="검색량 조회 오류">
+          {error}
+        </p>
+      )}
       {data && (
         <div aria-live="polite">
           <h3>조회 결과: {queried}</h3>

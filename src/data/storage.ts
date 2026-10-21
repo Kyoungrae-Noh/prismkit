@@ -6,6 +6,7 @@ export const DATA_KEYS = [
   'prismkit.keyword-research.v1',
   'prismkit.candidates.v1',
   'prismkit.publishing.v1',
+  'prismkit.captures.v1',
 ] as const
 export type StoragePort = Pick<Storage, 'getItem' | 'setItem'>
 export interface RestoreEnvelope {
@@ -18,6 +19,10 @@ export function readEnvelope(storage: StoragePort): RestoreEnvelope | null {
   const raw = storage.getItem(RESTORED_KEY)
   if (raw === null) return null
   const value = JSON.parse(raw) as RestoreEnvelope
+  // Phase 3A envelopes predate captures. Extend only the in-memory view; never rewrite on read.
+  for (const part of [value?.datasets, value?.previous]) {
+    if (part && !Object.hasOwn(part, 'prismkit.captures.v1')) part['prismkit.captures.v1'] = null
+  }
   if (
     value.version !== 1 ||
     !value.datasets ||
@@ -28,6 +33,27 @@ export function readEnvelope(storage: StoragePort): RestoreEnvelope | null {
   )
     throw new Error('통합 저장소를 읽을 수 없습니다. 원본을 보존합니다.')
   return value
+}
+/** One localStorage commit links a capture draft and an idea without a partial two-key write. */
+export function commitDatasets(
+  storage: StoragePort,
+  changes: Record<string, string | null>,
+  expected: string,
+) {
+  const port = workspaceStorage(storage)
+  const current = Object.fromEntries(DATA_KEYS.map((k) => [k, port.getItem(k)]))
+  if (JSON.stringify(current) !== expected)
+    throw new Error('다른 탭에서 자료가 바뀌었습니다. 새로고침 후 다시 시도하세요.')
+  const envelope = readEnvelope(storage)
+  storage.setItem(
+    RESTORED_KEY,
+    JSON.stringify({
+      version: 1,
+      datasets: { ...current, ...changes },
+      previous: envelope?.previous ?? current,
+      restoredAt: envelope?.restoredAt ?? new Date().toISOString(),
+    }),
+  )
 }
 export function workspaceStorage(storage: StoragePort): StoragePort {
   return {

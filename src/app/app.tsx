@@ -20,6 +20,8 @@ import { Ideas } from '../pages/ideas'
 import { Keywords } from '../pages/keywords'
 import { Publishing } from '../pages/publishing'
 import { BackupPage } from '../pages/backup'
+import { CapturesPage } from '../pages/captures'
+import { RecommendationsPage } from '../pages/recommendations'
 import { Connections } from '../pages/connections'
 import { IdeaForm } from '../components/idea-form'
 import { EmptyState, Modal } from '../components/ui'
@@ -27,8 +29,10 @@ import { EmptyState, Modal } from '../components/ui'
 const navigation = [
   { path: '/', label: '대시보드', icon: LayoutDashboard },
   { path: '/ideas', label: '글감 관리', icon: FilePenLine },
+  { path: '/captures', label: '캡처 글감 수집', icon: Lightbulb },
   { path: '/keywords', label: '키워드 분석', icon: Search },
   { path: '/publishing', label: '경쟁·발행 판단', icon: FilePenLine },
+  { path: '/recommendations', label: '발행 후보 TOP 10', icon: Sparkles },
   { path: '/backup', label: '백업·복원', icon: FilePenLine },
   { path: '/connections', label: '데이터 연결', icon: Plug },
 ]
@@ -182,6 +186,8 @@ export function App() {
               <Route path="/keywords" element={<Keywords notify={setToast} />} />
               <Route path="/publishing" element={<Publishing />} />
               <Route path="/backup" element={<BackupPage />} />
+              <Route path="/captures" element={<CapturesPage />} />
+              <Route path="/recommendations" element={<RecommendationsPage />} />
               <Route path="/connections" element={<Connections />} />
               <Route
                 path="*"

@@ -59,7 +59,7 @@ test('LIVE requires a button request; displays counts, bounds, sorting and safe 
   await panel.scrollIntoViewIfNeeded()
   await page.screenshot({ path: testInfo.outputPath('live-mocked.png'), fullPage: true })
   await panel.getByRole('button', { name: '검색량 조회', exact: true }).click()
-  await expect(panel.getByRole('alert')).toContainText('인증에 실패')
+  await expect(panel.getByRole('alert', { name: '검색량 조회 오류' })).toContainText('인증에 실패')
   await expect(panel.getByText('LIVE · VERIFIED')).toHaveCount(0)
   expect(requests).toBe(2)
   await expect(page.getByRole('button', { name: '수동 자료 추가' })).toBeEnabled()

@@ -57,6 +57,12 @@ export function BackupPage() {
           수 있으므로 파일을 안전하게 보관하세요. 파일은 이 브라우저에서만 처리하며 외부 서버에
           업로드하지 않습니다.
         </p>
+        <p>
+          version 2 전체 백업은 캡처 글감·추천 목록과 이미지 원본도 포함합니다(최대 64 MiB). 원본이
+          누락되면 불완전한 백업을 만들지 않습니다. version 1 가져오기는 기존 캡처 자료를 유지하며
+          연결이 끊기면 복원을 거부합니다. 이미지 원본은 복원 전에 별도 저장소에 안전하게 준비하고,
+          마지막에 전체 자료를 한 번에 전환합니다.
+        </p>
         <button className="button secondary" onClick={() => void download()}>
           전체 JSON 내보내기
         </button>{' '}

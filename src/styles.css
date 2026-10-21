@@ -3057,10 +3057,110 @@ textarea {
 }
 
 /* Whole-workspace restore controls must remain reachable at 320px. */
-.backup-page, .backup-preview { min-width: 0; }
-.backup-page .research-panel, .backup-preview { display: grid; gap: 16px; }
-.backup-page input[type='file'] { width: 100%; max-width: 100%; min-width: 0; }
-.backup-page p, .backup-page label { overflow-wrap: anywhere; }
-.backup-confirm { display: flex; align-items: flex-start; gap: 8px; }
-.backup-confirm input { flex-shrink: 0; }
-.backup-page .button { justify-self: start; max-width: 100%; white-space: normal; }
+.backup-page,
+.backup-preview {
+  min-width: 0;
+}
+.backup-page .research-panel,
+.backup-preview {
+  display: grid;
+  gap: 16px;
+}
+.backup-page input[type='file'] {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+.backup-page p,
+.backup-page label {
+  overflow-wrap: anywhere;
+}
+.backup-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.backup-confirm input {
+  flex-shrink: 0;
+}
+.backup-page .button {
+  justify-self: start;
+  max-width: 100%;
+  white-space: normal;
+}
+.capture-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+.capture-card {
+  padding: 16px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.capture-preview {
+  display: block;
+  max-width: 100%;
+  width: 100%;
+  height: 220px;
+  object-fit: contain;
+  background: var(--bg, #f6f5f1);
+}
+.capture-drop {
+  padding: 24px 12px;
+  border: 2px dashed #b8b3a8;
+  border-radius: 12px;
+}
+.capture-drop input {
+  max-width: 100%;
+}
+.capture-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+.capture-draft {
+  border-top: 1px solid #dedbd4;
+  padding: 20px 0;
+  overflow-wrap: anywhere;
+}
+.capture-editor {
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid #dedbd4;
+}
+.capture-editor fieldset {
+  min-width: 0;
+}
+.capture-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+}
+.capture-filters label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+.capture-filters input,
+.capture-filters select {
+  min-width: 0;
+  max-width: 100%;
+  padding: 10px;
+  border: 1px solid #c9c4bb;
+  border-radius: 8px;
+}
+.capture-page .panel,
+.recommendations-page .panel {
+  margin-bottom: 20px;
+}
+.capture-page label:has(input[type='checkbox']) {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
