@@ -67,3 +67,24 @@ it('reads old restore envelopes without rewriting them and fails atomically on q
   ).toThrow('공간')
   expect(s.getItem(RESTORED_KEY)).toBe(raw)
 })
+it('keeps original and edit checkpoints through backup, restore and later edits', async () => {
+  const s = storage(),
+    store = createManuscriptStore(s),
+    m = manuscript()
+  store.save(m)
+  const changed = store.save(
+    { ...m, content: { ...m.content, title: '첫 수정' } },
+    JSON.stringify(m),
+  )[0]
+  expect(changed.revisions?.[0].content.title).toBe(m.content.title)
+  const next = store.save(
+    { ...changed, content: { ...changed.content, title: '한국어 수정' } },
+    JSON.stringify(changed),
+  )[0]
+  expect(next.revisions).toHaveLength(1)
+  expect(next.generated).toEqual(m.generated)
+  const b = await parseBackup(JSON.stringify(await exportWorkspace(s)))
+  const target = storage()
+  await restoreWorkspace(target, b, JSON.stringify(rawSnapshot(target)))
+  expect(createManuscriptStore(target).read()[0]).toEqual(next)
+})

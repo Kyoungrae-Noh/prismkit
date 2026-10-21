@@ -92,6 +92,39 @@ export function RecommendationsPage() {
           </p>
         </div>
       </div>
+      <section className="panel research-panel" aria-label="후보 근거 요약">
+        <h2>검색 수요·경쟁·추천 근거</h2>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>키워드</th>
+                <th>검색량</th>
+                <th>경쟁 문서</th>
+                <th>판단·부족한 근거</th>
+                <th>다음 단계</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.slice(0, limit).map((r) => (
+                <tr key={r.id}>
+                  <th>{r.item.candidate.keyword}</th>
+                  <td>{r.volumeKnown ? displayCount(r.item.candidate.total) : '미확인'}</td>
+                  <td>{r.documents ? displayCount(r.documents.count) : '미확인'}</td>
+                  <td>
+                    {r.status}
+                    <br />
+                    {r.missing.join(' · ') || r.reasons.join(' · ')}
+                  </td>
+                  <td>
+                    <Link to={`/manuscripts?candidate=${encodeURIComponent(r.id)}`}>원고 제작</Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
       <section className="panel research-panel">
         <p>
           검토 가능한 후보만 최대 10개를 제시합니다. 검색량과 문서 수는 출처·확인일을 확인하며
@@ -112,100 +145,103 @@ export function RecommendationsPage() {
             불가이며 상승률을 생성하지 않습니다.
           </p>
         </details>
-        <div className="capture-filters">
-          <label>
-            추천 실험용 프리셋
-            <select
-              defaultValue="custom"
-              onChange={(e) => {
-                if (e.target.value === 'custom') return
-                const p = rankingPresets[e.target.value as keyof typeof rankingPresets]
-                setSettings({
-                  ...settings,
-                  min: p.min,
-                  documentsMax: p.documentsMax,
-                  max: '',
-                  documentsMin: '',
-                })
-              }}
-            >
-              <option value="custom">사용자 지정</option>
-              {Object.entries(rankingPresets).map(([key, p]) => (
-                <option key={key} value={key}>
-                  {p.label} (월 {p.min || '제한 없음'} / 문서 {p.documentsMax || '제한 없음'})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            최소 월 검색량
-            <input
-              inputMode="numeric"
-              value={settings.min}
-              onChange={(e) => setSettings({ ...settings, min: e.target.value })}
-            />
-          </label>
-          <label>
-            최대 월 검색량
-            <input
-              inputMode="numeric"
-              value={settings.max ?? ''}
-              onChange={(e) => setSettings({ ...settings, max: e.target.value })}
-            />
-          </label>
-          <label>
-            최소 경쟁 문서 수
-            <input
-              inputMode="numeric"
-              value={settings.documentsMin ?? ''}
-              onChange={(e) => setSettings({ ...settings, documentsMin: e.target.value })}
-            />
-          </label>
-          <label>
-            최대 경쟁 문서 수
-            <input
-              inputMode="numeric"
-              value={settings.documentsMax}
-              onChange={(e) => setSettings({ ...settings, documentsMax: e.target.value })}
-            />
-          </label>
-          <label>
-            추천 카테고리
-            <select
-              value={settings.category}
-              onChange={(e) => setSettings({ ...settings, category: e.target.value })}
-            >
-              <option value="all">전체</option>
-              {categories.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            추천 정렬
-            <select
-              value={settings.sort}
-              onChange={(e) =>
-                setSettings({ ...settings, sort: e.target.value as typeof settings.sort })
-              }
-            >
-              <option value="priority">상태·검토 점수순</option>
-              <option value="volume">검색량 높은 순</option>
-            </select>
-          </label>
-        </div>
-        <p>
-          문서 수 빠른 설정:{' '}
-          {[300, 500, 1000, 5000].map((n) => (
-            <button
-              className="button secondary"
-              key={n}
-              onClick={() => setSettings({ ...settings, documentsMax: String(n) })}
-            >
-              {n}개 이하
-            </button>
-          ))}
-        </p>
+        <details>
+          <summary>고급 필터·추천 설정</summary>
+          <div className="capture-filters">
+            <label>
+              추천 실험용 프리셋
+              <select
+                defaultValue="custom"
+                onChange={(e) => {
+                  if (e.target.value === 'custom') return
+                  const p = rankingPresets[e.target.value as keyof typeof rankingPresets]
+                  setSettings({
+                    ...settings,
+                    min: p.min,
+                    documentsMax: p.documentsMax,
+                    max: '',
+                    documentsMin: '',
+                  })
+                }}
+              >
+                <option value="custom">사용자 지정</option>
+                {Object.entries(rankingPresets).map(([key, p]) => (
+                  <option key={key} value={key}>
+                    {p.label} (월 {p.min || '제한 없음'} / 문서 {p.documentsMax || '제한 없음'})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              최소 월 검색량
+              <input
+                inputMode="numeric"
+                value={settings.min}
+                onChange={(e) => setSettings({ ...settings, min: e.target.value })}
+              />
+            </label>
+            <label>
+              최대 월 검색량
+              <input
+                inputMode="numeric"
+                value={settings.max ?? ''}
+                onChange={(e) => setSettings({ ...settings, max: e.target.value })}
+              />
+            </label>
+            <label>
+              최소 경쟁 문서 수
+              <input
+                inputMode="numeric"
+                value={settings.documentsMin ?? ''}
+                onChange={(e) => setSettings({ ...settings, documentsMin: e.target.value })}
+              />
+            </label>
+            <label>
+              최대 경쟁 문서 수
+              <input
+                inputMode="numeric"
+                value={settings.documentsMax}
+                onChange={(e) => setSettings({ ...settings, documentsMax: e.target.value })}
+              />
+            </label>
+            <label>
+              추천 카테고리
+              <select
+                value={settings.category}
+                onChange={(e) => setSettings({ ...settings, category: e.target.value })}
+              >
+                <option value="all">전체</option>
+                {categories.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              추천 정렬
+              <select
+                value={settings.sort}
+                onChange={(e) =>
+                  setSettings({ ...settings, sort: e.target.value as typeof settings.sort })
+                }
+              >
+                <option value="priority">상태·검토 점수순</option>
+                <option value="volume">검색량 높은 순</option>
+              </select>
+            </label>
+          </div>
+          <p>
+            문서 수 빠른 설정:{' '}
+            {[300, 500, 1000, 5000].map((n) => (
+              <button
+                className="button secondary"
+                key={n}
+                onClick={() => setSettings({ ...settings, documentsMax: String(n) })}
+              >
+                {n}개 이하
+              </button>
+            ))}
+          </p>
+        </details>
         <div className="capture-actions">
           <button className="button secondary" onClick={() => void load()}>
             저장 근거 다시 읽기
@@ -228,7 +264,8 @@ export function RecommendationsPage() {
         {message && <p role="status">{message}</p>}
       </section>
       {!error && !filterError && (
-        <>
+        <details>
+          <summary>후보별 상세 근거·비교·추천 저장</summary>
           {captures.report && (
             <section className="panel research-panel" aria-label="저장 당시 추천 결과">
               <details>
@@ -361,7 +398,7 @@ export function RecommendationsPage() {
               </div>
             </section>
           )}
-        </>
+        </details>
       )}
     </div>
   )

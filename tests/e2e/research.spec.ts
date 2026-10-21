@@ -59,6 +59,8 @@ test('corrupt research storage preserves data and leaves idea management usable'
     localStorage.setItem('prismkit.keyword-research.v1', 'corrupt-original'),
   )
   await page.reload()
+  await expect(page.getByRole('alert').filter({ hasText: '원본은 보존' })).toHaveCount(1)
+  await page.getByText('필터·분류 설정', { exact: true }).click()
   await expect(page.getByRole('alert').filter({ hasText: '원본은 보존' })).toHaveCount(2)
   await expect(page.getByRole('button', { name: '수동 자료 추가' })).toBeDisabled()
   expect(await page.evaluate(() => localStorage.getItem('prismkit.keyword-research.v1'))).toBe(

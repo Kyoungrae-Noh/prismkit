@@ -47,6 +47,7 @@ test('idea to LIVE analysis, strict document preset, linked save and competition
   const panel = page.getByRole('region', { name: '키워드 후보 선정' })
   await expect(panel.getByLabel('후보 분석 데이터')).toHaveValue('LIVE')
   await expect(page.getByRole('region', { name: 'API 사용량' })).toContainText('남은 호출: 29')
+  await panel.getByText('필터·분류 설정', { exact: true }).click()
   await panel.getByLabel('실험용 프리셋').selectOption('beginner')
   await expect(panel.getByLabel('후보 분석 요약')).toContainText('현재 필터 적용: 0개')
   await page.getByRole('button', { name: '수동 자료 추가' }).click()
@@ -116,13 +117,11 @@ test('whole workspace preview, confirmed restore in a different browser and cont
     await target.reload()
     await expect(target.getByRole('button', { name: '복원 후 편집 성공 수정' })).toBeVisible()
     await target.goto('http://127.0.0.1:4178/backup')
-    await target
-      .getByLabel('전체 JSON 가져오기')
-      .setInputFiles({
-        name: 'broken.json',
-        mimeType: 'application/json',
-        buffer: Buffer.from('{'),
-      })
+    await target.getByLabel('전체 JSON 가져오기').setInputFiles({
+      name: 'broken.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from('{'),
+    })
     await expect(target.getByRole('alert')).toContainText('JSON')
     await expect(target.getByRole('button', { name: '확인하고 전체 복원' })).toHaveCount(0)
   } finally {

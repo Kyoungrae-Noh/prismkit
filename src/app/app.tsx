@@ -1,3 +1,4 @@
+import { Workflow } from '../components/workflow'
 import { useEffect, useRef, useState } from 'react'
 import {
   ArrowUpRight,
@@ -45,6 +46,7 @@ export function App() {
   const [creating, setCreating] = useState(false)
   const [guide, setGuide] = useState(false)
   const [toast, setToast] = useState('')
+  const composing = useRef(false)
   const mainRef = useRef<HTMLElement>(null)
   const current = navigation.find((item) => item.path === location.pathname)?.label ?? '페이지 없음'
   useEffect(() => {
@@ -67,7 +69,24 @@ export function App() {
     return () => window.removeEventListener('keydown', listener)
   }, [menuOpen])
   return (
-    <div className="app-shell">
+    <div
+      className="app-shell"
+      onCompositionStartCapture={() => {
+        composing.current = true
+      }}
+      onCompositionEndCapture={() => {
+        composing.current = false
+      }}
+      onKeyDownCapture={(e) => {
+        if (
+          (composing.current || e.nativeEvent.isComposing || e.keyCode === 229) &&
+          ['Enter', 'Escape'].includes(e.key)
+        ) {
+          e.preventDefault()
+          e.stopPropagation()
+        }
+      }}
+    >
       <a className="skip-link" href="#main-content">
         본문으로 건너뛰기
       </a>
@@ -97,16 +116,31 @@ export function App() {
         </div>
         <div className="nav-label">WORKSPACE</div>
         <nav aria-label="주요 메뉴">
-          {navigation.map(({ path, label, icon: Icon }) => (
-            <NavLink key={path} to={path} end={path === '/'} onClick={() => setMenuOpen(false)}>
-              <Icon size={19} />
-              <span>{label}</span>
-              {path === '/ideas' && (
-                <span className="nav-count">{loading ? '–' : ideas.length}</span>
-              )}
-            </NavLink>
-          ))}
+          {navigation
+            .filter((n) => ['/', '/ideas', '/keywords', '/manuscripts'].includes(n.path))
+            .map(({ path, label, icon: Icon }) => (
+              <NavLink key={path} to={path} end={path === '/'} onClick={() => setMenuOpen(false)}>
+                <Icon size={19} />
+                <span>{label}</span>
+                {path === '/ideas' && (
+                  <span className="nav-count">{loading ? '–' : ideas.length}</span>
+                )}
+              </NavLink>
+            ))}
         </nav>
+        <details className="aux-navigation">
+          <summary>자료·설정 및 전체 도구</summary>
+          <nav aria-label="보조 메뉴">
+            {navigation
+              .filter((n) => !['/', '/ideas', '/keywords', '/manuscripts'].includes(n.path))
+              .map(({ path, label, icon: Icon }) => (
+                <NavLink key={path} to={path}>
+                  <Icon size={18} />
+                  {label}
+                </NavLink>
+              ))}
+          </nav>
+        </details>
         <div className="sidebar-bottom">
           <div className="sidebar-tip">
             <span className="tip-icon">
@@ -129,7 +163,7 @@ export function App() {
           </div>
           <div className="sidebar-footer">
             <span className="version-dot" />
-            Phase 3D·3E <span>v0.5.0</span>
+            Phase 3E-2 <span>v0.6.0</span>
           </div>
         </div>
       </aside>
@@ -179,34 +213,37 @@ export function App() {
               />
             </div>
           ) : (
-            <Routes>
-              <Route path="/" element={<Dashboard onCreate={() => setCreating(true)} />} />
-              <Route
-                path="/ideas"
-                element={<Ideas onCreate={() => setCreating(true)} notify={setToast} />}
-              />
-              <Route path="/keywords" element={<Keywords notify={setToast} />} />
-              <Route path="/publishing" element={<Publishing />} />
-              <Route path="/manuscripts" element={<ManuscriptsPage />} />
-              <Route path="/backup" element={<BackupPage />} />
-              <Route path="/captures" element={<CapturesPage />} />
-              <Route path="/recommendations" element={<RecommendationsPage />} />
-              <Route path="/connections" element={<Connections />} />
-              <Route
-                path="*"
-                element={
-                  <EmptyState
-                    title="페이지를 찾을 수 없어요"
-                    description="주소를 확인하거나 대시보드로 돌아가세요."
-                    action={
-                      <Link className="button primary" to="/">
-                        대시보드로 이동
-                      </Link>
-                    }
-                  />
-                }
-              />
-            </Routes>
+            <>
+              <Workflow />
+              <Routes>
+                <Route path="/" element={<Dashboard onCreate={() => setCreating(true)} />} />
+                <Route
+                  path="/ideas"
+                  element={<Ideas onCreate={() => setCreating(true)} notify={setToast} />}
+                />
+                <Route path="/keywords" element={<Keywords notify={setToast} />} />
+                <Route path="/publishing" element={<Publishing />} />
+                <Route path="/manuscripts" element={<ManuscriptsPage />} />
+                <Route path="/backup" element={<BackupPage />} />
+                <Route path="/captures" element={<CapturesPage />} />
+                <Route path="/recommendations" element={<RecommendationsPage />} />
+                <Route path="/connections" element={<Connections />} />
+                <Route
+                  path="*"
+                  element={
+                    <EmptyState
+                      title="페이지를 찾을 수 없어요"
+                      description="주소를 확인하거나 대시보드로 돌아가세요."
+                      action={
+                        <Link className="button primary" to="/">
+                          대시보드로 이동
+                        </Link>
+                      }
+                    />
+                  }
+                />
+              </Routes>
+            </>
           )}
           <footer className="page-footer">
             <span>

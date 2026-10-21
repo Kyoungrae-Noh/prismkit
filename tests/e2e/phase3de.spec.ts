@@ -8,7 +8,7 @@ const status = {
   blocked: false,
   used: 0,
   monthUsed: 0,
-  remaining: 5,
+  remaining: 30,
   reservedUsd: 0,
   estimatedUsd: 0,
 }
@@ -59,7 +59,7 @@ test('status button shows loading, disabled approval, local errors and exhausted
       })
     if (calls === 2)
       return route.fulfill({ status: 401, contentType: 'text/html', body: '<html>login</html>' })
-    return route.fulfill({ json: { ...status, used: 5, remaining: 0 } })
+    return route.fulfill({ json: { ...status, used: 30, remaining: 0 } })
   })
   await page.goto('/manuscripts')
   await page.evaluate(
@@ -133,18 +133,22 @@ test('three Naver accounts and separate Reviewman drafts edit, persist, export a
   )
   await page.reload()
   await page.getByLabel('발행 후보', { exact: true }).selectOption('candidate')
+  await page.getByText('발행 판단 근거', { exact: true }).click()
   await expect(page.getByText('데이터 부족', { exact: true })).toBeVisible()
   expect(calls).toBe(0)
   await page.getByRole('button', { name: '원고 연결 상태 확인' }).click()
-  await expect(page.getByText(/생성 가능 5회 · 오늘 0 \/ 5/)).toBeVisible()
+  await expect(page.getByText(/생성 가능 30회 · 오늘 0 \/ 30/)).toBeVisible()
   await page.getByRole('checkbox', { name: /개인정보를 확인했으며/ }).check()
   for (const account of ['nkr09134', 'nkr09135', 'nkr09136']) {
+    if ((await page.locator('.manuscript-setup').getAttribute('open')) === null)
+      await page.locator('.manuscript-setup > summary').click()
     await page.getByLabel('블로그 계정', { exact: true }).selectOption(account)
     await page.getByRole('button', { name: 'AI 원고 생성', exact: true }).click()
-    await expect(page.getByLabel('원고 제목', { exact: true })).toHaveValue(
+    await expect(page.getByLabel('원고 제목', { exact: true })).toHaveText(
       `naver-${account} 여행 준비`,
     )
   }
+  await page.locator('.manuscript-setup > summary').click()
   await page.getByLabel('원고 유형', { exact: true }).selectOption('reviewman')
   await page.getByLabel('Reviewman 카테고리', { exact: true }).selectOption('travel')
   await page.getByRole('button', { name: 'AI 원고 생성', exact: true }).click()
@@ -157,7 +161,7 @@ test('three Naver accounts and separate Reviewman drafts edit, persist, export a
   expect(calls).toBe(4)
   await page.reload()
   await page.getByRole('button', { name: /검토한 여행 원고 · Reviewman/ }).click()
-  await expect(page.getByLabel('본문 1', { exact: true })).toHaveValue(
+  await expect(page.getByLabel('본문 1', { exact: true })).toHaveText(
     '준비물과 일정은 원문을 확인하세요.',
   )
   await expect(page.getByRole('listitem').filter({ hasText: /^공식 근거 없음:/ })).toBeVisible()
@@ -206,7 +210,7 @@ test('three Naver accounts and separate Reviewman drafts edit, persist, export a
     await expect(p.getByRole('status')).toContainText('무결성')
     await p.goto('http://127.0.0.1:4178/manuscripts')
     await p.getByRole('button', { name: /검토한 여행 원고 · Reviewman/ }).click()
-    await expect(p.getByLabel('소제목 1', { exact: true })).toHaveValue('준비 점검')
+    await expect(p.getByLabel('소제목 1', { exact: true })).toHaveText('준비 점검')
   } finally {
     await ctx.close()
   }
@@ -229,6 +233,7 @@ test('generation errors do not retry or destroy the brief and approval gate stay
   )
   await page.reload()
   await page.getByLabel('발행 후보', { exact: true }).selectOption('candidate')
+  await page.getByText('작성 근거·대상 독자 편집', { exact: true }).click()
   await page.getByLabel('계정별 독자·차별화 방향').fill('초보 여행자에게 맞춤 안내')
   await expect(page.getByRole('button', { name: 'AI 원고 생성', exact: true })).toBeDisabled()
   await page.getByRole('button', { name: '원고 연결 상태 확인' }).click()
@@ -237,6 +242,7 @@ test('generation errors do not retry or destroy the brief and approval gate stay
   await expect(page.getByRole('alert')).toContainText('차단')
   expect(calls).toBe(1)
   await page.reload()
+  await page.getByText('작성 근거·대상 독자 편집', { exact: true }).click()
   await expect(page.getByLabel('계정별 독자·차별화 방향')).toHaveValue('초보 여행자에게 맞춤 안내')
   expect(calls).toBe(1)
 })

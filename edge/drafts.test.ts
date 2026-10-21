@@ -53,6 +53,68 @@ test('draft budgets require separate approval, never reuse image approval, and e
   assert.equal(calls, 0)
   assert.equal(draftStatus({}, s, now).used, null)
 })
+test('approved expansion preserves legacy reservations and independently enforces the $10 ceiling', async () => {
+  const old: DraftBudget = {
+    day: '2026-10-21',
+    month: '2026-10',
+    used: 5,
+    monthUsed: 50,
+    last: 0,
+    lease: 0,
+    blocked: false,
+    ids: Array.from({ length: 50 }, (_, i) => `legacy-${i}`),
+    input: 400,
+    output: 200,
+  }
+  const migrated = draftBudget(old, now)
+  assert.equal(migrated.used, 5)
+  assert.equal(migrated.monthUsed, 50)
+  assert.equal(migrated.reservedCents, 150)
+  assert.equal(migrated.input, 400)
+  const s = memory()
+  s.write({ ...migrated, reservedCents: 999 })
+  assert.equal(draftStatus(settings, s, now).remaining, 0)
+  let calls = 0
+  await assert.rejects(
+    generateDraft(
+      brief,
+      'over-dollar-budget',
+      settings,
+      s,
+      async () => {
+        calls++
+        return response()
+      },
+      now,
+    ),
+    /소진/,
+  )
+  assert.equal(calls, 0)
+  assert.equal(s.read()!.reservedCents, 999)
+  assert.throws(() => draftBudget({ ...migrated, reservedCents: 149 }, now), /자동 초기화/)
+  assert.throws(() => draftBudget({ ...migrated, reservedCents: 1001 }, now), /자동 초기화/)
+  assert.equal(draftBudget({ ...old, blocked: true }, now + 86400000).blocked, true)
+})
+test('300 monthly reservations stop at $9 even though dollar ceiling allows more', async () => {
+  const s = memory()
+  let calls = 0
+  const f: typeof fetch = async () => {
+    calls++
+    return response()
+  }
+  for (let i = 0; i < 300; i++) {
+    const at = now + Math.floor(i / 30) * 86400000 + (i % 30) * 11000
+    await generateDraft(brief, `monthly-reservation-${i}`, settings, s, f, at)
+  }
+  const at = now + 10 * 86400000
+  assert.equal(draftStatus(settings, s, at).reservedUsd, 9)
+  assert.equal(draftStatus(settings, s, at).remaining, 0)
+  await assert.rejects(
+    generateDraft(brief, 'monthly-reservation-overflow', settings, s, f, at),
+    /소진/,
+  )
+  assert.equal(calls, 300)
+})
 test('model, no-store, structured template and usage cost are enforced for both manuscript types', async () => {
   for (const type of ['naver', 'reviewman'] as const) {
     let calls = 0
@@ -132,25 +194,27 @@ test('daily/monthly caps survive day rollover and corrupted state fails closed',
     calls++
     return response()
   }
-  for (let i = 0; i < 5; i++)
+  for (let i = 0; i < 30; i++)
     await generateDraft(brief, `request-000000000${i}`, settings, s, f, now + i * 11000)
   await assert.rejects(
-    generateDraft(brief, 'request-0000000009', settings, s, f, now + 60000),
+    generateDraft(brief, 'request-daily-overflow', settings, s, f, now + 400000),
     /소진/,
   )
   assert.equal(draftStatus(settings, s, now + 86400000).used, 0)
-  assert.equal(draftStatus(settings, s, now + 86400000).monthUsed, 5)
+  assert.equal(draftStatus(settings, s, now + 86400000).monthUsed, 30)
   const b = s.read()!
-  b.monthUsed = 50
-  b.ids = Array.from({length:50},(_,i)=>`request-00000000-${i}`)
+  b.monthUsed = 300
+  b.reservedCents = 900
+  b.ids = Array.from({ length: 300 }, (_, i) => `request-00000000-${i}`)
   s.write(b)
   await assert.rejects(
     generateDraft(brief, 'request-0000000010', settings, s, f, now + 86400000),
     /소진/,
   )
-  assert.equal(calls, 5)
+  assert.equal(calls, 30)
   assert.throws(() => draftBudget({ ...b, used: -1 }, now), /자동 초기화/)
-  for(const day of ['2026-02-30','2026-99-99','2027-01-01']) assert.throws(()=>draftBudget({...b,day},now),/자동 초기화/)
+  for (const day of ['2026-02-30', '2026-99-99', '2027-01-01'])
+    assert.throws(() => draftBudget({ ...b, day }, now), /자동 초기화/)
 })
 test('429 never retries, reserves failed calls and remains blocked across days', async () => {
   const s = memory()

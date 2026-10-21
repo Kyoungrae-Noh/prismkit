@@ -2,7 +2,7 @@ import { readEnvelope } from '../data/storage'
 import { CandidatePanel, type LiveCandidateBatch } from '../components/candidate-panel'
 import { LiveKeywords } from '../components/live-keywords'
 import { ResearchPanel } from '../components/research-panel'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   ArrowDownWideNarrow,
@@ -30,7 +30,11 @@ export function Keywords({ notify }: { notify(message: string): void }) {
     () => sessions.get(sessionKey) ?? null,
   )
   const [query, setDemoQuery] = useState('')
-  const keyword = params.get('keyword') ?? idea?.keyword ?? ''
+  const urlKeyword = params.get('keyword') ?? idea?.keyword ?? ''
+  const [keyword, setKeyword] = useState(urlKeyword)
+  useEffect(() => {
+    setKeyword(urlKeyword)
+  }, [urlKeyword])
   const [category, setCategory] = useState('all')
   const [competition, setCompetition] = useState('all')
   const [sort, setSort] = useState('opportunity')
@@ -75,19 +79,18 @@ export function Keywords({ notify }: { notify(message: string): void }) {
       )}
       <LiveKeywords
         keyword={keyword}
-        onKeywordChange={(value) =>
+        onKeywordChange={setKeyword}
+        initialData={liveBatch?.data ?? null}
+        initialQueried={liveBatch?.keyword ?? ''}
+        onData={(keyword, data) => {
           setParams(
             (current) => {
               const next = new URLSearchParams(current)
-              next.set('keyword', value)
+              next.set('keyword', keyword)
               return next
             },
             { replace: true },
           )
-        }
-        initialData={liveBatch?.data ?? null}
-        initialQueried={liveBatch?.keyword ?? ''}
-        onData={(keyword, data) => {
           const batch = { keyword, data }
           sessions.set(sessionKey, batch)
           setLiveBatch(batch)

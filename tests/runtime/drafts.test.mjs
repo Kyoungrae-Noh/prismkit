@@ -31,7 +31,7 @@ test('manuscript reservations survive isolate restart and remain separate from c
           bindings: {
             OPENAI_API_KEY: 'TEST_ONLY_DRAFT',
             AI_COST_APPROVAL: 'gpt-4.1-mini-2025-04-14:daily30:monthly5USD:2026-11-21',
-            DRAFT_COST_APPROVAL: 'gpt-4.1-mini-2025-04-14:daily5:monthly1.50USD:2026-11-21',
+            DRAFT_COST_APPROVAL: 'gpt-4.1-mini-2025-04-14:daily30:monthly300:monthly10USD:2026-11-21',
           },
           durableObjects: { SEARCHAD: { className: 'SearchAdBudget', useSQLite: true } },
           outboundService: async (r) => {

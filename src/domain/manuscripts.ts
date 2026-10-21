@@ -1,6 +1,10 @@
 import { boundedText, objectKeys } from './ai-contract.ts'
 export const DRAFT_MODEL = 'gpt-4.1-mini-2025-04-14'
 export const DRAFT_RESERVE = 0.03
+export const DRAFT_DAILY_LIMIT = 30
+export const DRAFT_MONTHLY_LIMIT = 300
+export const DRAFT_MONTHLY_CENTS = 1000
+export const DRAFT_RESERVE_CENTS = 3
 export const DRAFT_KEY = 'prismkit.manuscripts.v1'
 export const draftAccounts = ['nkr09134', 'nkr09135', 'nkr09136'] as const
 export const reviewCategories = [
@@ -39,6 +43,7 @@ export interface DraftContent {
   introduction: string
   sections: { heading: string; body: string; sourceIds: string[] }[]
   faq: { question: string; answer: string; sourceIds: string[] }[]
+  comparison?: { columns: string[]; rows: string[][] }
   checklist: string[]
   conclusion: string
   imageNotes: string[]
@@ -64,6 +69,7 @@ export interface Manuscript {
   updatedAt: string
   usage: DraftUsage | null
   review: Record<string, boolean>
+  revisions?: { savedAt: string; content: DraftContent }[]
 }
 export interface DraftStatus {
   connected: boolean
@@ -142,7 +148,7 @@ export function validateBrief(v: unknown): DraftBrief {
 export function validateContent(v: unknown, brief: DraftBrief, editable = false): DraftContent {
   objectKeys(
     v,
-    'title meta h1 introduction sections faq checklist conclusion imageNotes sourceIds internalIds cta monetization checks',
+    'title meta h1 introduction sections faq checklist conclusion imageNotes sourceIds internalIds cta monetization checks comparison',
   )
   for (const k of ['title', 'h1']) str(v[k], 300, !editable)
   str(v.meta, 500)
@@ -183,6 +189,23 @@ export function validateContent(v: unknown, brief: DraftBrief, editable = false)
     if (!Array.isArray(v[k]) || v[k].length > 20) throw Error('원고 목록 형식 오류')
     for (const x of v[k]) str(x, 1000)
   }
+  if (v.comparison !== undefined) {
+    objectKeys(v.comparison, 'columns rows')
+    const t = v.comparison
+    if (
+      !Array.isArray(t.columns) ||
+      t.columns.length > 5 ||
+      !Array.isArray(t.rows) ||
+      t.rows.length > 12 ||
+      (t.rows.length && t.columns.length < 2)
+    )
+      throw Error('비교표 형식 오류')
+    for (const c of t.columns) str(c, 200, !editable)
+    for (const row of t.rows) {
+      if (!Array.isArray(row) || row.length !== t.columns.length) throw Error('비교표 열 수 오류')
+      for (const c of row) str(c, 1000)
+    }
+  }
   if (brief.type === 'naver' && (v.imageNotes as string[]).length !== 5)
     throw Error('네이버 원고 이미지 위치는 5개여야 합니다.')
   if (!editable && brief.type === 'reviewman' && (!(v.checklist as string[]).length || !v.meta))
@@ -213,11 +236,28 @@ export function qualityIssues(
     issues.push('제목·본문·FAQ에 비어 있는 편집 항목이 있습니다.')
   if (!b.sources.some((s) => s.kind === 'official'))
     issues.push('공식 근거 없음: 날짜·금액·정책·신청 조건을 발행 전에 확인해야 합니다.')
+  if (b.type === 'reviewman' && /비교/.test(b.intent + b.topic) && !c.comparison?.rows.length)
+    issues.push('비교 의도에 필요한 항목·조건·차이의 근거가 부족합니다.')
   for (const s of c.sections) if (!s.sourceIds.length) issues.push(`근거 부족 문단: ${s.heading}`)
   for (const f of c.faq) if (!f.sourceIds.length) issues.push(`근거 부족 FAQ: ${f.question}`)
   for (const s of b.sources)
     if (now - Date.parse(s.checkedDate) > 30 * 86400000)
       issues.push(`30일 초과 근거 재확인: ${s.title}`)
+  if (!c.title.includes(b.keyword)) issues.push('제목과 핵심 검색어의 관계를 확인하세요.')
+  if (!b.intent.trim() || b.intent.includes('확인 필요'))
+    issues.push('독자가 해결할 질문과 검색 의도를 먼저 정하세요.')
+  if (!b.angle.trim()) issues.push('대상 독자·기존 콘텐츠와 다른 설명 방향을 보완하세요.')
+  if (/무조건|100%|상위 노출 보장|수익 보장/.test(JSON.stringify(c)))
+    issues.push('보장·과장 표현을 삭제하거나 확인된 범위로 수정하세요.')
+  if (new Set(c.faq.map((f) => f.question.trim())).size < c.faq.length)
+    issues.push('FAQ 질문이 중복됩니다.')
+  if (b.type === 'reviewman') {
+    if (!c.meta.trim() || !c.h1.trim()) issues.push('Reviewman SEO 설명·H1이 부족합니다.')
+    if (!c.cta.trim()) issues.push('사용자가 다음에 할 행동을 안내하세요.')
+    if (!c.checklist.length) issues.push('Reviewman 실행 체크리스트를 보완하세요.')
+    if (!c.monetization.trim())
+      issues.push('광고·제휴 적합성은 미평가입니다. 부적합하면 사용하지 마세요.')
+  }
   if (b.type === 'reviewman' && !c.internalIds.length) issues.push('관련 콘텐츠 내부 링크 미확인')
   const body = [
     c.introduction,
@@ -246,7 +286,7 @@ export function validateManuscripts(v: unknown): Manuscript[] {
   if (!Array.isArray(v) || v.length > 100 || JSON.stringify(v).length * 2 > 3 * 1024 * 1024)
     throw Error('원고 저장 한도(100개/3 MiB) 또는 형식 오류')
   for (const m of v) {
-    objectKeys(m, 'id brief content generated model createdAt updatedAt usage review')
+    objectKeys(m, 'id brief content generated model createdAt updatedAt usage review revisions')
     str(m.id, 100, true)
     if (m.model !== DRAFT_MODEL) throw Error('원고 모델 오류')
     for (const k of ['createdAt', 'updatedAt']) {
@@ -256,6 +296,16 @@ export function validateManuscripts(v: unknown): Manuscript[] {
     const b = validateBrief(m.brief)
     validateContent(m.content, b, true)
     validateContent(m.generated, b)
+    if (m.revisions !== undefined) {
+      if (!Array.isArray(m.revisions) || m.revisions.length > 1000)
+        throw Error('수정 이력 한도 또는 형식 오류')
+      for (const r of m.revisions) {
+        objectKeys(r, 'savedAt content')
+        if (typeof r.savedAt !== 'string' || !Number.isFinite(Date.parse(r.savedAt)))
+          throw Error('수정 이력 시각 오류')
+        validateContent(r.content, b, true)
+      }
+    }
     objectKeys(m.review, Object.keys(draftReviewLabels).join(' '))
     if (Object.values(m.review).some((x) => typeof x !== 'boolean')) throw Error('검토 상태 오류')
     if (m.usage !== null) {
@@ -302,6 +352,25 @@ export function draftMarkdown(m: Manuscript) {
           .map((x, i) => `\n\n[이미지 ${c.sections.length + i + 1}: ${x}]`)
           .join('')
       : '') +
+    (c.comparison?.rows.length
+      ? '\n\n## 비교표\n' +
+        '| ' +
+        c.comparison.columns
+          .map((x) => x.replace(/\|/g, '&#124;').replace(/\n/g, ' '))
+          .join(' | ') +
+        ' |\n' +
+        '| ' +
+        c.comparison.columns.map(() => '---').join(' | ') +
+        ' |\n' +
+        c.comparison.rows
+          .map(
+            (r) =>
+              '| ' +
+              r.map((x) => x.replace(/\|/g, '&#124;').replace(/\n/g, '<br>')).join(' | ') +
+              ' |',
+          )
+          .join('\n')
+      : '') +
     `\n\n## 체크리스트\n${c.checklist.map((x) => `- ${x}`).join('\n')}\n\n## ${n ? '│ ' : ''}FAQ\n\n` +
     c.faq.map((f) => `### ${f.question}\n\n${f.answer}`).join('\n\n') +
     `\n\n${c.conclusion}\n\n## 공식 출처·관련 콘텐츠\n` +
@@ -337,6 +406,16 @@ export function draftHTML(m: Manuscript) {
           .map((x, i) => p(`[이미지 ${c.sections.length + i + 1}: ${x}]`))
           .join('')
       : '') +
+    (c.comparison?.rows.length
+      ? h('비교표') +
+        '<table><thead><tr>' +
+        c.comparison.columns.map((x) => '<th>' + escape(x) + '</th>').join('') +
+        '</tr></thead><tbody>' +
+        c.comparison.rows
+          .map((r) => '<tr>' + r.map((x) => '<td>' + escape(x) + '</td>').join('') + '</tr>')
+          .join('') +
+        '</tbody></table>'
+      : '') +
     h('체크리스트') +
     `<ul>${c.checklist.map((s) => `<li>${escape(s)}</li>`).join('')}</ul>` +
     h('FAQ') +
@@ -352,4 +431,19 @@ export function draftHTML(m: Manuscript) {
       .join('') +
     `</article><aside>${h('편집 검토 메모 (발행 전 제거)')}${p('CTA 제안: ' + c.cta)}${p('수익화 가설: ' + c.monetization)}${qualityIssues(m).map(p).join('')}</aside></body></html>`
   )
+}
+
+export function evidenceNeeds(b: DraftBrief): string[] {
+  const needs: string[] = []
+  if (!b.sources.some((s) => s.kind === 'official'))
+    needs.push(
+      '공식 원문 링크·인용 내용·확인 날짜를 추가하세요. 없으면 조사용 초안으로 생성됩니다.',
+    )
+  if (/신청|지원|정책|자격/.test(b.topic + b.intent))
+    needs.push('대상·신청 기간·조건·절차를 확인할 공식 공고가 필요합니다.')
+  if (/예약|구매|비교|요금|가격/.test(b.topic + b.intent))
+    needs.push('가격·예약 가능 여부·비교 조건은 최신 공식 안내로 확인하세요.')
+  if (!b.angle.trim())
+    needs.push('대상 독자와 이 글에서 해결할 질문을 적으면 설명이 구체적이 됩니다.')
+  return needs
 }

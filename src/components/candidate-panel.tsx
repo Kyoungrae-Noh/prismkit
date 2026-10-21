@@ -1,6 +1,6 @@
 import { readEnvelope } from '../data/storage'
 import { validDocuments } from '../domain/documents'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useWorkspace } from '../app/workspace'
 import {
@@ -44,6 +44,7 @@ export function CandidatePanel({
   live: LiveCandidateBatch | null
   initialIdeaId?: string
 }) {
+  const navigate = useNavigate()
   const { keywords, ideas, researchRepository } = useWorkspace()
   const draftKey = `${readEnvelope(localStorage)?.restoredAt ?? 'original'}:${initialIdeaId}`
   const draft = drafts.get(draftKey)
@@ -184,7 +185,7 @@ export function CandidatePanel({
   function field(name: keyof CandidateFilters, value: string | boolean) {
     setFilters((current) => ({ ...current, [name]: value }))
   }
-  function saveSelected() {
+  function saveSelected(next = false) {
     try {
       if (ideaId && !ideas.some((idea) => idea.id === ideaId))
         throw new Error('연결 글감이 없어졌습니다. 연결을 다시 선택하세요.')
@@ -192,6 +193,12 @@ export function CandidatePanel({
       if (!rows.length) return
       const status = store.save(rows, context, ideaId || null)
       setNotice(`${status.added}개 저장 · 중복 후보 ${status.duplicates}개는 덮어쓰지 않았습니다.`)
+      if (next && rows.length === 1 && mode !== 'DEMO') {
+        const stored = store
+          .list()
+          .find((c) => c.candidate.key === rows[0].key && c.ideaId === (ideaId || null))
+        if (stored) navigate(`/manuscripts?candidate=${encodeURIComponent(stored.id)}`)
+      }
       setSelected(new Set())
       setRevision((value) => value + 1)
     } catch (error) {
@@ -261,7 +268,7 @@ export function CandidatePanel({
           {loadError && <p role="alert">{loadError}</p>}
         </>
       )}
-      <details open>
+      <details>
         <summary>필터·분류 설정</summary>
         <div className="idea-form">
           <div className="research-grid">
@@ -516,9 +523,16 @@ export function CandidatePanel({
         <button
           className="button primary"
           disabled={!selected.size || !!storeError}
-          onClick={saveSelected}
+          onClick={() => saveSelected()}
         >
           선택 후보 저장 ({selected.size})
+        </button>
+        <button
+          className="button primary"
+          disabled={selected.size !== 1 || mode === 'DEMO'}
+          onClick={() => saveSelected(true)}
+        >
+          저장하고 원고 제작
         </button>
       </div>
       <div className="idea-form">
@@ -679,6 +693,14 @@ export function CandidatePanel({
                 >
                   경쟁 분석
                 </Link>
+                {item.candidate.mode !== 'DEMO' && (
+                  <Link
+                    className="button primary"
+                    to={`/manuscripts?candidate=${encodeURIComponent(item.id)}`}
+                  >
+                    원고 제작
+                  </Link>
+                )}
                 <p>
                   {item.candidate.mode} · {item.candidate.intent} · {item.candidate.status}
                 </p>

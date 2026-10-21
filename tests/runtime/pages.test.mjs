@@ -84,7 +84,7 @@ for (const approved of [false, true])
           blocked: false,
           used: approved ? 0 : null,
           monthUsed: approved ? 0 : null,
-          remaining: approved ? 5 : null,
+          remaining: approved ? 30 : null,
           estimatedUsd: approved ? 0 : null,
           reservedUsd: approved ? 0 : null,
         })

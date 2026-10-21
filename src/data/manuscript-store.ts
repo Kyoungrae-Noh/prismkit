@@ -15,7 +15,27 @@ export function createManuscriptStore(storage: StoragePort) {
       old = data.find((x) => x.id === m.id)
     if (expected !== undefined && JSON.stringify(old) !== expected)
       throw Error('다른 탭에서 원고가 바뀌었습니다. 입력을 복사한 뒤 다시 여세요.')
-    const next = [m, ...data.filter((x) => x.id !== m.id)]
+    // Keep checkpoint history without recording every IME keystroke. Never discard prior checkpoints.
+    const revisions = m.revisions ?? old?.revisions ?? []
+    const changed = old && JSON.stringify(old.content) !== JSON.stringify(m.content)
+    const checkpoint =
+      changed &&
+      (!revisions.length ||
+        Date.now() - Date.parse(revisions[revisions.length - 1].savedAt) >= 30000)
+    const saved = {
+      ...m,
+      ...(checkpoint
+        ? {
+            revisions: [
+              ...revisions,
+              { savedAt: new Date().toISOString(), content: structuredClone(old.content) },
+            ],
+          }
+        : revisions.length
+          ? { revisions }
+          : {}),
+    }
+    const next = [saved, ...data.filter((x) => x.id !== m.id)]
     validateManuscripts(next)
     try {
       port.setItem(DRAFT_KEY, JSON.stringify(next))

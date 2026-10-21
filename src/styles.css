@@ -3292,3 +3292,31 @@ textarea {
     padding: 10px;
   }
 }
+
+/* Four-stage workflow; existing routes stay accessible through contextual tools. */
+.workflow-shell { margin-bottom: 24px; }
+.workflow-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.workflow-steps a { display:flex; align-items:center; gap:8px; padding:12px; background:#fff; border:1px solid #e9e4dc; border-radius:10px; color:#625b52; font-weight:600; }
+.workflow-steps a[aria-current] { border-color:#d67044; color:#a54a24; background:#fff7ef; }
+.workflow-steps a span { font-size:12px; opacity:.7; }
+.workflow-tools { display:flex; flex-wrap:wrap; gap:16px; margin-top:12px; font-size:13px; }
+.aux-navigation { margin:16px 12px; font-size:13px; color:#69645d; }
+.aux-navigation summary { cursor:pointer; padding:10px 0; }
+.inline-editor { display:block; min-height:1.5em; white-space:pre-wrap; overflow-wrap:anywhere; border-radius:4px; outline:1px solid transparent; }
+.inline-editor:focus { outline:2px solid #ce7752; background:#fffaf6; }
+.inline-editor:empty::before { content:'클릭해서 입력'; color:#aaa; }
+.editable-manuscript { margin:20px auto; max-width:860px; }
+.editable-manuscript .inline-editor { padding:4px; }
+.editable-manuscript.naver { font-size:19pt; line-height:1.7; }
+.editable-manuscript h2 .inline-editor { display:inline; }
+.editable-manuscript small, .editable-manuscript .subtle-badge, .editable-manuscript .image-placeholder { font-size:13px; }
+.image-placeholder { margin:24px 0; padding:16px; background:#f4f1ed; border:1px dashed #b8aaa0; color:#706356; }
+.evidence-needs { font-size:13px; color:#875a35; }
+@media(max-width:600px) {
+  .workflow-steps a { flex-direction:column; gap:2px; padding:9px 3px; font-size:12px; }
+  .editable-manuscript.naver { font-size:17px; }
+  .editable-manuscript.naver h2 { font-size:24px; }
+}
+
+.skip-link:not(:focus) { clip-path:inset(50%); width:1px; height:1px; overflow:hidden; white-space:nowrap; }
+.manuscript-setup > summary { padding:12px 0; cursor:pointer; font-weight:600; }

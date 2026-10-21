@@ -245,6 +245,7 @@ test('only three supported recommendations, comparison and snapshot survive relo
     })),
   }
   await page.goto('/recommendations')
+  await page.getByText('후보별 상세 근거·비교·추천 저장', { exact: true }).click()
   await page.evaluate(
     ({ items, publishing }) => {
       localStorage.setItem('prismkit.candidates.v1', JSON.stringify({ version: 1, items }))
@@ -253,6 +254,7 @@ test('only three supported recommendations, comparison and snapshot survive relo
     { items, publishing },
   )
   await page.reload()
+  await page.getByText('후보별 상세 근거·비교·추천 저장', { exact: true }).click()
   const top = page.getByRole('region', { name: '추천 TOP 10' })
   await expect(top).toContainText('후보 3개 / 최대 10개')
   await expect(page.getByRole('region', { name: '조사 대기 후보' })).toContainText('데이터 부족')
@@ -261,10 +263,12 @@ test('only three supported recommendations, comparison and snapshot survive relo
   await page.getByRole('button', { name: '추천 목록 저장' }).click()
   await expect(page.getByRole('status')).toContainText('저장했습니다')
   await page.reload()
+  await page.getByText('후보별 상세 근거·비교·추천 저장', { exact: true }).click()
   await page.getByText('저장 당시 추천 결과 펼치기').click()
   await expect(page.getByRole('region', { name: '저장 당시 추천 결과' })).toContainText(
     '모의 API 데이터',
   )
+  await page.getByText('고급 필터·추천 설정', { exact: true }).click()
   await page.getByLabel('최대 경쟁 문서 수').fill('100')
   await expect(top).toContainText('후보 0개')
   await page.getByLabel('최대 경쟁 문서 수').fill('500')

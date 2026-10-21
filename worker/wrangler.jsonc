@@ -8,7 +8,7 @@
   "preview_urls": false,
   "vars": {
     "AI_COST_APPROVAL": "gpt-4.1-mini-2025-04-14:daily30:monthly5USD:2026-11-21",
-    "DRAFT_COST_APPROVAL": "gpt-4.1-mini-2025-04-14:daily5:monthly1.50USD:2026-11-21",
+    "DRAFT_COST_APPROVAL": "gpt-4.1-mini-2025-04-14:daily30:monthly300:monthly10USD:2026-11-21",
   },
   "observability": {
     "enabled": false,

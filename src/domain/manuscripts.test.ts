@@ -7,6 +7,7 @@ import {
   qualityIssues,
   draftHTML,
   draftMarkdown,
+  evidenceNeeds,
 } from './manuscripts'
 it('requires controlled templates, source provenance and exactly five Naver image positions', () => {
   expect(validateContent(content, brief)).toEqual(content)
@@ -21,6 +22,42 @@ it('requires controlled templates, source provenance and exactly five Naver imag
       brief,
     ),
   ).toThrow()
+})
+it('evaluates reader intent, missing official action evidence, overclaims and comparison safely', () => {
+  const m = manuscript()
+  m.brief = {
+    ...m.brief,
+    type: 'reviewman',
+    topic: '지원 신청 비교',
+    intent: '신청 비교',
+    angle: '',
+    sources: [],
+  }
+  m.content.cta = ''
+  m.content.sections[0].body = '100% 지원 보장'
+  expect(evidenceNeeds(m.brief).join(' ')).toContain('공식 공고')
+  const q = qualityIssues(m).join(' ')
+  expect(q).toContain('보장·과장')
+  expect(q).toContain('비교 의도')
+  expect(q).toContain('공식 근거 없음')
+  expect(q).toContain('다음에 할 행동')
+  m.brief = { ...brief, type: 'reviewman' }
+  m.content = {
+    ...content,
+    comparison: { columns: ['조건', '확인 내용'], rows: [['대상', '확인 필요']] },
+  }
+  expect(validateContent(m.content, m.brief).comparison?.rows).toHaveLength(1)
+  expect(draftHTML(m)).toContain('<table>')
+  expect(draftMarkdown(m)).toContain('| 조건 | 확인 내용 |')
+  expect(() =>
+    validateContent(
+      {
+        ...m.content,
+        comparison: { columns: ['조건', '자료'], rows: [['https://invented.invalid', '미확인']] },
+      },
+      m.brief,
+    ),
+  ).toThrow('URL')
 })
 it('rejects invented and unsafe links, secret-shaped fields and oversized briefs', () => {
   expect(() => validateContent({ ...content, cta: 'https://invented.example' }, brief)).toThrow()
