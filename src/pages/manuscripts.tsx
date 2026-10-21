@@ -48,11 +48,14 @@ export function ManuscriptsPage() {
   const [error, setError] = useState(''),
     [notice, setNotice] = useState(''),
     [busy, setBusy] = useState(false),
+    [checking, setChecking] = useState(false),
+    [statusError, setStatusError] = useState(''),
     [status, setStatus] = useState<DraftStatus | null>(null),
     [consent, setConsent] = useState(false),
     [assessment, setAssessment] = useState<string[]>([])
   const expected = useRef<string | undefined>(undefined),
     running = useRef(false),
+    checkingRef = useRef(false),
     loaded = useRef(false)
   function patchBrief(p: Partial<DraftBrief>) {
     const next = { ...brief, ...p }
@@ -127,12 +130,18 @@ export function ManuscriptsPage() {
     }
   }, [])
   async function check() {
+    if (checkingRef.current || running.current) return
+    checkingRef.current = true
+    setChecking(true)
+    setStatus(null)
+    setStatusError('')
     try {
       setStatus(await fetchDraftStatus())
-      setError('')
     } catch (e) {
-      setStatus(null)
-      setError((e as Error).message)
+      setStatusError((e as Error).message)
+    } finally {
+      checkingRef.current = false
+      setChecking(false)
     }
   }
   function save(m: Manuscript) {
@@ -156,7 +165,15 @@ export function ManuscriptsPage() {
       })
   }
   async function generate() {
-    if (running.current || !consent || !status?.connected || status.blocked) return
+    if (
+      running.current ||
+      checkingRef.current ||
+      !consent ||
+      !status?.connected ||
+      status.blocked ||
+      !status.remaining
+    )
+      return
     running.current = true
     setBusy(true)
     setError('')
@@ -172,11 +189,7 @@ export function ManuscriptsPage() {
     } finally {
       running.current = false
       setBusy(false)
-      try {
-        setStatus(await fetchDraftStatus())
-      } catch {
-        setStatus(null)
-      }
+      await check()
     }
   }
   function download(kind: 'md' | 'html') {
@@ -370,13 +383,41 @@ export function ManuscriptsPage() {
           {DRAFT_MODEL} · 입력 4,000 / 출력 6,000토큰 예시 약 $0.0112. 1회 $0.03 예약 · 일 5회/$0.15
           · 월 $1.50. 실패도 예약량 유지. 이미지 판독과 별도이며 실제 청구 상한을 보장하지 않습니다.
         </p>
-        <button className="button secondary" disabled={busy} onClick={() => void check()}>
-          원고 연결 상태 확인
+        <button
+          type="button"
+          className="button secondary"
+          disabled={busy || checking}
+          onClick={() => void check()}
+        >
+          {checking ? '원고 상태 조회 중…' : '원고 연결 상태 확인'}
         </button>
+        <div aria-live="polite" aria-atomic="true">
+          <p>
+            {checking
+              ? '서버의 원고 승인·예산 상태를 조회하고 있습니다.'
+              : status
+                ? !status.connected
+                  ? '조회 완료 · 서버 응답 정상 · 원고 생성 비활성'
+                  : status.blocked
+                    ? '조회 완료 · 원고 생성 차단 · 관리자 확인 필요'
+                    : !status.remaining
+                      ? '조회 완료 · 원고 일일 또는 월간 한도 소진'
+                      : '조회 완료 · 원고 생성 연결됨'
+                : statusError
+                  ? '원고 상태 조회 실패'
+                  : '원고 연결 확인 필요'}
+          </p>
+          {status && !status.connected && (
+            <p>
+              원고 생성은 별도 비용 승인과 서버 설정이 필요합니다. 승인 대기·만료 또는 API 키 미설정
+              상태에서는 생성할 수 없습니다. 이미지 판독의 활성화와는 별개입니다.
+            </p>
+          )}
+        </div>
+        {statusError && <p role="alert">{statusError}</p>}
         <p>
-          {status?.connected ? '원고 생성 연결됨' : '원고 예산 승인·연결 확인 필요'} · 오늘{' '}
-          {status?.used ?? '미확인'} / 5 · 이번 달 {status?.monthUsed ?? '미확인'} / 50 · 월 예약 $
-          {status?.reservedUsd?.toFixed(2) ?? '미확인'} · 응답 토큰 추정액 $
+          오늘 {status?.used ?? '미확인'} / 5 · 이번 달 {status?.monthUsed ?? '미확인'} / 50 · 월
+          예약 ${status?.reservedUsd?.toFixed(2) ?? '미확인'} · 응답 토큰 추정액 $
           {status?.estimatedUsd?.toFixed(5) ?? '미확인'}
         </p>
         <label>
@@ -393,8 +434,10 @@ export function ManuscriptsPage() {
           className="button primary"
           disabled={
             busy ||
+            checking ||
             !status?.connected ||
             status.blocked ||
+            !status.remaining ||
             !consent ||
             !brief.candidateId ||
             !loaded.current

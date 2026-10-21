@@ -1,4 +1,4 @@
-import { it, expect } from 'vitest'
+import { it, expect, vi } from 'vitest'
 import { fetchDraftStatus, requestDraft } from './draft-client'
 import { brief, manuscript } from '../../tests/fixtures/manuscript'
 it('rejects login HTML, malformed budgets and response identity mismatch', async () => {
@@ -48,4 +48,43 @@ it('status reads do not generate and valid response preserves provenance', async
   expect(s.connected).toBe(false)
   const m = manuscript()
   expect((await requestDraft(m.brief, m.id, async () => Response.json(m))).brief).toEqual(brief)
+})
+it('status timeout aborts once after 15 seconds without claiming a generation reservation', async () => {
+  vi.useFakeTimers()
+  try {
+    let calls = 0
+    const pending = fetchDraftStatus(async (_url, init) => {
+      calls++
+      return new Promise<Response>((_resolve, reject) => {
+        init!.signal!.addEventListener('abort', () =>
+          reject(new DOMException('Aborted', 'AbortError')),
+        )
+      })
+    })
+    const assertion = expect(pending).rejects.toThrow('생성 요청은 전송하지 않았습니다')
+    await vi.advanceTimersByTimeAsync(15000)
+    await assertion
+    expect(calls).toBe(1)
+  } finally {
+    vi.useRealTimers()
+  }
+})
+it('status errors are actionable and never expose upstream details', async () => {
+  await expect(
+    fetchDraftStatus(async () => {
+      throw new TypeError('private network details')
+    }),
+  ).rejects.toThrow('네트워크와 관리자 로그인')
+  await expect(
+    fetchDraftStatus(async () =>
+      Response.json({ error: { message: 'private details' } }, { status: 503 }),
+    ),
+  ).rejects.toThrow('서버 연결')
+  for (const body of ['null', '{broken']) {
+    await expect(
+      fetchDraftStatus(
+        async () => new Response(body, { headers: { 'content-type': 'application/json' } }),
+      ),
+    ).rejects.toThrow('사용량 응답 오류')
+  }
 })

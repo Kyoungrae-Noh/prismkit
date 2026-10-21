@@ -33,6 +33,67 @@ const seed = () => ({
   savedAt: new Date().toISOString(),
   ruleVersion: 'rules-v1',
 })
+test('status button shows loading, disabled approval, local errors and exhausted budgets without generating', async ({
+  page,
+}) => {
+  let calls = 0
+  let respond!: () => void
+  await page.route('**/api/**', async (route) => {
+    expect(route.request().method()).toBe('GET')
+    expect(route.request().url()).toContain('/drafts/status')
+    calls++
+    await new Promise<void>((resolve) => {
+      respond = resolve
+    })
+    if (calls === 1)
+      return route.fulfill({
+        json: {
+          connected: false,
+          blocked: false,
+          used: null,
+          monthUsed: null,
+          remaining: null,
+          reservedUsd: null,
+          estimatedUsd: null,
+        },
+      })
+    if (calls === 2)
+      return route.fulfill({ status: 401, contentType: 'text/html', body: '<html>login</html>' })
+    return route.fulfill({ json: { ...status, used: 5, remaining: 0 } })
+  })
+  await page.goto('/manuscripts')
+  await page.evaluate(
+    (c) =>
+      localStorage.setItem('prismkit.candidates.v1', JSON.stringify({ version: 1, items: [c] })),
+    seed(),
+  )
+  await page.reload()
+  await page.getByLabel('발행 후보', { exact: true }).selectOption('candidate')
+  await page.getByRole('checkbox', { name: /개인정보를 확인했으며/ }).check()
+  expect(calls).toBe(0)
+  const section = page
+    .locator('section')
+    .filter({ has: page.getByRole('heading', { name: '2. 원고 생성', exact: true }) })
+  for (let i = 1; i <= 3; i++) {
+    await section.getByRole('button', { name: '원고 연결 상태 확인' }).click()
+    await expect(section.getByRole('button', { name: '원고 상태 조회 중…' })).toBeDisabled()
+    await expect(section.getByRole('button', { name: 'AI 원고 생성', exact: true })).toBeDisabled()
+    await expect.poll(() => calls).toBe(i)
+    respond()
+    if (i === 1) {
+      await expect(section.getByText('조회 완료 · 서버 응답 정상 · 원고 생성 비활성')).toBeVisible()
+      await expect(section.getByText(/원고 생성은 별도 비용 승인/)).toBeVisible()
+    } else if (i === 2) {
+      await expect(section.getByRole('alert')).toContainText('관리자 로그인')
+      await expect(section.getByText('원고 상태 조회 실패', { exact: true })).toBeVisible()
+    } else {
+      await expect(section.getByText(/조회 완료 · 원고 일일 또는 월간 한도 소진/)).toBeVisible()
+      await expect(section.getByRole('alert')).toHaveCount(0)
+    }
+    await expect(section.getByRole('button', { name: 'AI 원고 생성', exact: true })).toBeDisabled()
+  }
+  expect(calls).toBe(3)
+})
 test('three Naver accounts and separate Reviewman drafts edit, persist, export and restore with mock AI only', async ({
   page,
   browser,

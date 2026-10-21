@@ -4,6 +4,87 @@ import { resolve } from 'node:path'
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare'
 import { generateKeyPair, exportJWK, SignJWT } from 'jose'
 
+test('authenticated Pages status reaches Worker RPC with cost approval disabled and never calls OpenAI', async () => {
+  const issuer = 'https://test-team.cloudflareaccess.com'
+  const { privateKey, publicKey } = await generateKeyPair('RS256')
+  const jwk = { ...(await exportJWK(publicKey)), kid: 'draft-status-key', alg: 'RS256', use: 'sig' }
+  const token = await new SignJWT({ email: 'admin@example.invalid', type: 'app' })
+    .setProtectedHeader({ alg: 'RS256', kid: jwk.kid })
+    .setIssuer(issuer)
+    .setAudience('test-audience')
+    .setSubject('test-user')
+    .setIssuedAt()
+    .setExpirationTime('5m')
+    .sign(privateKey)
+  let outboundCalls = 0
+  const runtime = new Miniflare(
+    convertV4MiniflareOptions({
+      cf: false,
+      telemetry: { enabled: false },
+      workers: [
+        {
+          name: 'pages',
+          modules: true,
+          scriptPath: resolve('test-results/pages/index.js'),
+          compatibilityDate: '2026-10-19',
+          compatibilityFlags: ['nodejs_compat'],
+          bindings: {
+            ACCESS_ISSUER: issuer,
+            ACCESS_AUD: 'test-audience',
+            ADMIN_EMAIL: 'admin@example.invalid',
+          },
+          durableObjects: {
+            SEARCHAD: { className: 'SearchAdBudget', scriptName: 'api', useSQLite: true },
+          },
+          serviceBindings: {
+            ASSETS: async () => {
+              throw Error('API must never return SPA HTML')
+            },
+          },
+          outboundService: async (request) => {
+            assert.equal(request.url, `${issuer}/cdn-cgi/access/certs`)
+            return Response.json({ keys: [jwk] })
+          },
+        },
+        {
+          name: 'api',
+          modules: true,
+          scriptPath: resolve('test-results/worker/index.js'),
+          compatibilityDate: '2026-10-19',
+          compatibilityFlags: ['nodejs_compat'],
+          bindings: { OPENAI_API_KEY: 'TEST_ONLY_DRAFT', DRAFT_COST_APPROVAL: '' },
+          durableObjects: { SEARCHAD: { className: 'SearchAdBudget', useSQLite: true } },
+          outboundService: async () => {
+            outboundCalls++
+            throw Error('External calls forbidden')
+          },
+        },
+      ],
+    }),
+  )
+  try {
+    for (let i = 0; i < 2; i++) {
+      const r = await runtime.dispatchFetch('https://prismkit.online/api/ai/drafts/status', {
+        headers: { 'cf-access-jwt-assertion': token, 'x-prismkit-request': 'draft-ai' },
+      })
+      assert.equal(r.status, 200)
+      assert.equal(r.headers.get('cache-control'), 'no-store')
+      assert.deepEqual(await r.json(), {
+        connected: false,
+        blocked: false,
+        used: null,
+        monthUsed: null,
+        remaining: null,
+        estimatedUsd: null,
+        reservedUsd: null,
+      })
+    }
+    assert.equal(outboundCalls, 0)
+  } finally {
+    await runtime.dispose()
+  }
+})
+
 test('compiled Pages routing protects SPA, assets, API and preview hosts using real JWT verification', async () => {
   const issuer = 'https://test-team.cloudflareaccess.com'
   const { privateKey, publicKey } = await generateKeyPair('RS256')
