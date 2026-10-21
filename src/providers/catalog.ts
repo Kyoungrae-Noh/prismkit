@@ -1,3 +1,4 @@
+import { hubAuthenticatedAt } from './hub-activation'
 import type { VerificationStatus } from '../domain/research'
 import { hubApis, hubLabels } from './hub-types'
 export interface SourceAudit {
@@ -24,15 +25,12 @@ export const sourceAudits: SourceAudit[] = [
   ...hubApis.map((api): SourceAudit => ({
     id: api,
     name: `네이버 ${hubLabels[api]} · API HUB`,
-    verification: 'DOCUMENTED',
+    verification: 'VERIFIED',
     documentation: `https://api.ncloud-docs.com/docs/naver-api-hub-${api === 'shopping' ? 'shopping-insight-keywords' : `search-${api === 'cafe' ? 'cafearticle' : api}`}.md`,
     checkedDate: '2026-10-21',
-    authenticatedTestAt: null,
-    usageApproved: false,
-    note:
-      api === 'trend' || api === 'shopping'
-        ? '상대 관심도 어댑터·모의 검증 완료. 저장·상업 활용 조건 확인 전 LIVE 보류; 실제 인증 호출 미실시.'
-        : '어댑터·모의 검증 완료. 검색 결과 저장·가공·AI·수익화 활용은 NAVER 별도 허가 확인 전 LIVE 보류.',
+    authenticatedTestAt: hubAuthenticatedAt[api],
+    usageApproved: true,
+    note: '개인 Prismkit의 저장·AI 분석·수익화 활용 허가를 사용자 확인에 근거해 반영. 단일 실제 호출 HTTP 200 및 Provider 정규화 성공.',
   })),
   {
     id: 'autocomplete',

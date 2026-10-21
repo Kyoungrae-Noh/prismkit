@@ -1,3 +1,5 @@
+> 후속 상태: 사용자 활용 허용 확인 및 실제 인증 결과는 [Phase 3I LIVE 재개 기록](PHASE3I_LIVE_REPORT.md)을 참조한다. 아래는 활성화 전 조사·구현 당시의 기록이다.
+
 # Phase 3I — NAVER API HUB 조사 및 활성화 조건
 
 확인일: 2026-10-21 (KST). 기존 운영 HEAD: `92fc199b5290e2a7fdd1c2093a18f384d5e4c822`.

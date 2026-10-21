@@ -1,3 +1,4 @@
+import { hubAuthenticatedAt } from '../src/providers/hub-activation.ts'
 import { hubApis, type HubApi, type HubResult, type HubStatus } from '../src/providers/hub-types.ts'
 import { hubWireRequest, normalizeHub, validateHubRequest } from './hub-contract.ts'
 import { boundedJson } from './searchad.ts'
@@ -7,18 +8,14 @@ export interface HubSettings {
   NAVER_API_HUB_CLIENT_SECRET?: string
 }
 export const hubLimits = { daily: 30, monthly: 300, intervalMs: 1000, cacheSeconds: 300 } as const
-// Deliberate deployment gate, not a browser toggle or an environment-only override.
-// See docs/PHASE3I_API_REVIEW.md. Search-derived storage/AI/monetization is restricted;
-// Data Lab's applicable storage/commercial terms have not been established.
+// Activation requires both the user's permission confirmation and successful authentication.
+// Missing server credentials still fail closed; quotas and authentication remain enforced.
 export const hubPolicy: Record<HubApi, { enabled: boolean; reason: string }> = Object.fromEntries(
   hubApis.map((api) => [
     api,
     {
-      enabled: false,
-      reason:
-        api === 'trend' || api === 'shopping'
-          ? 'Data Lab 저장·상업적 활용 조건 확인 필요'
-          : '검색 결과 저장·가공·AI·수익화 활용에 대한 NAVER 별도 허가 필요',
+      enabled: Boolean(hubAuthenticatedAt[api]),
+      reason: '개인 Prismkit 이용 허가 사용자 확인 · 실제 인증 성공 (2026-10-21)',
     },
   ]),
 ) as Record<HubApi, { enabled: boolean; reason: string }>
@@ -131,7 +128,8 @@ export async function queryHub(
     const response = await fetcher(wire.url, {
       method: wire.method,
       body: wire.body,
-      redirect: 'error',
+      // Workers supports manual/follow only. Reject 3xx below without forwarding credentials.
+      redirect: 'manual',
       signal: AbortSignal.timeout(12000),
       headers: {
         'X-NCP-APIGW-API-KEY-ID': settings.NAVER_API_HUB_CLIENT_ID,

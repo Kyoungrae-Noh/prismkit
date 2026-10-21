@@ -22,7 +22,7 @@
     "test:edge": "node --experimental-strip-types --test edge/*.test.ts",
     "typecheck:edge": "tsc -p tsconfig.edge.json",
     "types:edge": "wrangler types worker/env.d.ts --config worker/wrangler.jsonc --env-interface Env && wrangler types pages-env.d.ts --config wrangler.jsonc --env-interface PagesEnv --include-runtime false && prettier --write worker/env.d.ts pages-env.d.ts",
-    "build:edge": "wrangler deploy --dry-run --config worker/wrangler.jsonc --outdir ../test-results/worker && wrangler pages functions build --outdir test-results/pages --compatibility-date 2026-10-19 --compatibility-flags nodejs_compat",
+    "build:edge": "wrangler deploy --dry-run --config worker/wrangler.jsonc --outdir \"$PWD/test-results/worker\" && wrangler pages functions build --outdir test-results/pages --compatibility-date 2026-10-19 --compatibility-flags nodejs_compat",
     "test:runtime": "npm run build:edge && node --test tests/runtime/*.test.mjs",
     "check:all": "npm run check && npm run test:runtime && npm run test:secrets && npm run test:e2e"
   },

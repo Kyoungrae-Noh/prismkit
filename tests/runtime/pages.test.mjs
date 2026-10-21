@@ -97,7 +97,7 @@ for (const approved of [false, true])
       const hubState = await hub.json()
       assert.equal(hubState.configured, false)
       assert.equal(hubState.apis.length, 6)
-      assert.ok(hubState.apis.every((a) => !a.enabled && a.dailyUsed === 0 && a.monthlyUsed === 0))
+      assert.ok(hubState.apis.every((a) => a.enabled && a.dailyUsed === 0 && a.monthlyUsed === 0))
       for (const api of ['blog', 'cafe', 'kin', 'news', 'trend', 'shopping']) {
         const blockedHub = await runtime.dispatchFetch('https://prismkit.online/api/hub/query', {
           method: 'POST',
@@ -110,8 +110,8 @@ for (const approved of [false, true])
             category: '50000000',
           }),
         })
-        assert.equal(blockedHub.status, 403)
-        assert.equal((await blockedHub.json()).error.code, 'POLICY_HOLD')
+        assert.equal(blockedHub.status, 503)
+        assert.equal((await blockedHub.json()).error.code, 'CONFIG')
       }
       const noAuthHub = await runtime.dispatchFetch('https://prismkit.online/api/hub/status', {
         headers: { 'x-prismkit-request': 'hub-query' },

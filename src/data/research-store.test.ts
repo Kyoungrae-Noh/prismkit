@@ -118,7 +118,7 @@ describe('manual research integrity', () => {
   })
   it('blocks documented, untested or unapproved sources and never substitutes demo results', async () => {
     for (const source of sourceAudits) {
-      expect(canConnect(source)).toBe(false)
+      expect(canConnect(source)).toBe(source.usageApproved)
       expect(await createUnavailableProvider(source).getVolume('캠핑')).toMatchObject({
         data: null,
         collectedAt: null,

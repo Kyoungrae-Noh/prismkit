@@ -93,7 +93,7 @@ for (const api of hubApis)
         const headers = new Headers(init?.headers)
         assert.equal(headers.get('X-NCP-APIGW-API-KEY'), 'test-secret')
         assert.equal(String(url).includes('test-secret'), false)
-        assert.equal(init?.redirect, 'error')
+        assert.equal(init?.redirect, 'manual')
         return Response.json(raw(api))
       },
       () => time,
@@ -113,7 +113,7 @@ for (const api of hubApis)
       if (api === 'kin' || api === 'cafe') assert.equal(result.items[0].date, null)
     }
   })
-test('all deployed policy gates reject before credentials, budget writes or external calls', async () => {
+test('held APIs reject before credentials or calls; activated APIs require server credentials', async () => {
   const s = store()
   let calls = 0
   for (const api of hubApis) {
@@ -127,14 +127,30 @@ test('all deployed policy gates reject before credentials, budget writes or exte
           throw Error()
         },
         () => time,
+        Object.fromEntries(
+          hubApis.map((a) => [a, { enabled: false, reason: '조건 확인 필요' }]),
+        ) as typeof hubPolicy,
       ),
-      /허가|조건/,
+      /조건/,
+    )
+    await assert.rejects(
+      queryHub(
+        request(api),
+        {},
+        s,
+        async () => {
+          calls++
+          throw Error()
+        },
+        () => time,
+      ),
+      /인증정보 미등록/,
     )
     assert.equal(s.read(api), null)
   }
   assert.equal(calls, 0)
   assert.equal(
-    hubStatus(auth, s, time).apis.every((a) => !a.enabled),
+    hubStatus(auth, s, time).apis.every((a) => a.enabled),
     true,
   )
 })
@@ -237,6 +253,30 @@ test('corrupt budget metadata fails closed without upstream calls or reset', asy
   )
   assert.equal(calls, 0)
   assert.equal(s.read('blog')?.monthly, 300)
+})
+test('redirect responses fail without following the destination or exposing upstream content', async () => {
+  const s = store()
+  let calls = 0
+  await assert.rejects(
+    queryHub(
+      request('blog'),
+      auth,
+      s,
+      async (_url, init) => {
+        calls++
+        assert.equal(init?.redirect, 'manual')
+        return new Response('private upstream body', {
+          status: 302,
+          headers: { Location: 'https://other.invalid/' },
+        })
+      },
+      () => time,
+    ),
+    /HTTP 302/,
+  )
+  assert.equal(calls, 1)
+  assert.equal(s.cached('blog'), null)
+  assert.equal(s.read('blog')?.daily, 1)
 })
 for (const status of [401, 403, 429])
   test(`${status}: no automatic retries and persistent block isolated to affected API`, async () => {

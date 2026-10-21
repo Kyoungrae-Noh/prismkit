@@ -1,3 +1,4 @@
+import { HubEvidence } from './hub-evidence'
 import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useWorkspace } from '../app/workspace'
@@ -12,7 +13,6 @@ import {
   discoveryRecommendation,
   groupDiscovery,
   prioritizeDiscovery,
-  trendDirection,
   type DiscoveryAnalysis,
   type DiscoveryCandidate,
 } from '../domain/discovery'
@@ -89,13 +89,15 @@ export function DiscoveryPanel() {
     if (mode === 'LIVE') {
       const s = await check()
       if (
+        !s.configured ||
         !s.apis.some(
-          (a) => ['kin', 'news', ...(category ? ['shopping'] : [])].includes(a.api) && a.enabled,
+          (a) =>
+            ['kin', 'news', ...(category ? ['shopping'] : [])].includes(a.api) &&
+            a.enabled &&
+            !a.blocked,
         )
       ) {
-        setMessage(
-          'LIVE 발굴 보류: API 데이터 활용 조건 확인이 필요합니다. 고급 설정에서 모의 흐름을 확인할 수 있습니다.',
-        )
+        setMessage('LIVE 발굴 보류: 사용 가능한 API가 없습니다. 고급 설정의 API 상태를 확인하세요.')
         return
       }
     }
@@ -239,8 +241,7 @@ export function DiscoveryPanel() {
         <small>조회 주제: {seeds.join(' · ') || '선택 필요'} · 최대 2개</small>
       </div>
       <p className="discovery-hold">
-        LIVE 자동 발굴은 데이터 활용 조건 확인까지 보류됩니다. 기존 캡처·검색광고·원고 기능은 계속
-        사용할 수 있습니다.
+        LIVE 발굴은 버튼을 누를 때만 실행됩니다. 후보 수집 후 선택한 글감만 상세 분석하세요.
       </p>
       <details className="discovery-advanced">
         <summary>고급 설정·API 상태·실험용 필터</summary>
@@ -257,7 +258,7 @@ export function DiscoveryPanel() {
                 setMessage('')
               }}
             >
-              <option value="LIVE">LIVE (조건 확인 필요)</option>
+              <option value="LIVE">LIVE 실제 API</option>
               <option value="DEMO">DEMO 모의 흐름 (외부 호출 없음)</option>
             </select>
           </label>
@@ -370,7 +371,7 @@ export function DiscoveryPanel() {
                     <tr key={a.api}>
                       <td>{hubLabels[a.api]}</td>
                       <td>
-                        {a.enabled ? 'LIVE' : '보류'}
+                        {a.enabled && status.configured ? 'LIVE' : '보류'}
                         {a.blocked ? ' · 오류 차단' : ''}
                       </td>
                       <td>
@@ -488,59 +489,7 @@ export function DiscoveryPanel() {
               </ul>
               <p>미확인: {rec.missing.join(', ')}</p>
               {a?.related.length ? <p>검색광고 관련어: {a.related.join(' · ')}</p> : null}
-              {a?.results.map((r) => (
-                <details key={r.api}>
-                  <summary>
-                    {hubLabels[r.api]} · {r.mode} · 조회 {r.collectedAt}
-                  </summary>
-                  <p>
-                    {r.unit === 'api-results'
-                      ? `해당 API 검색 결과 ${r.total ?? '미확인'}건 · API 순서이며 실제 통합검색 순위 아님`
-                      : `상대 지표 0–100 · ${r.startDate} ~ ${r.endDate} · ${r.device} · 검색량·매출·전환율 아님`}
-                  </p>
-                  {r.items.map((i) => (
-                    <article key={i.url}>
-                      <strong>
-                        {i.apiPosition}. {i.title}
-                      </strong>
-                      <p>{i.description}</p>
-                      <p>
-                        {i.source} · {i.date ?? '작성일 미제공'}
-                      </p>
-                      {r.mode === 'LIVE' && (
-                        <a href={i.originalUrl ?? i.url} target="_blank" rel="noreferrer">
-                          원본 출처
-                        </a>
-                      )}
-                    </article>
-                  ))}
-                  {r.series.map((s) => (
-                    <div key={s.title}>
-                      <p>
-                        {s.title} · {trendDirection(s)}
-                      </p>
-                      <div className="table-scroll">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>기간</th>
-                              <th>상대 관심도</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {s.points.map((p) => (
-                              <tr key={p.date}>
-                                <td>{p.date}</td>
-                                <td>{p.ratio}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  ))}
-                </details>
-              ))}
+              <HubEvidence results={a?.results ?? []} />
               <Link to={`/keywords?keyword=${encodeURIComponent(c.keyword)}`}>
                 기존 키워드 분석으로 이동
               </Link>

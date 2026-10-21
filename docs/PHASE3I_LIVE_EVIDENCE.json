@@ -1,0 +1,102 @@
+{
+  "apiAuthentication": [
+    {
+      "api": "blog",
+      "at": "2026-10-21T12:29:43.798Z",
+      "http": 200,
+      "normalized": true,
+      "limitHeaders": {},
+      "fields": ["lastBuildDate", "total", "start", "display", "items"],
+      "itemCount": 10,
+      "seriesCount": 0,
+      "pointCounts": [],
+      "unit": "api-results",
+      "query": "여행 준비",
+      "total": 36730251,
+      "trend": []
+    },
+    {
+      "api": "cafe",
+      "at": "2026-10-21T12:29:44.226Z",
+      "http": 200,
+      "normalized": true,
+      "limitHeaders": {},
+      "fields": ["lastBuildDate", "total", "start", "display", "items"],
+      "itemCount": 10,
+      "seriesCount": 0,
+      "pointCounts": [],
+      "unit": "api-results",
+      "query": "여행 준비",
+      "total": 16690998,
+      "trend": []
+    },
+    {
+      "api": "kin",
+      "at": "2026-10-21T12:29:44.469Z",
+      "http": 200,
+      "normalized": true,
+      "limitHeaders": {},
+      "fields": ["lastBuildDate", "total", "start", "display", "items"],
+      "itemCount": 10,
+      "seriesCount": 0,
+      "pointCounts": [],
+      "unit": "api-results",
+      "query": "여행 준비",
+      "total": 1378075,
+      "trend": []
+    },
+    {
+      "api": "news",
+      "at": "2026-10-21T12:29:44.685Z",
+      "http": 200,
+      "normalized": true,
+      "limitHeaders": {},
+      "fields": ["lastBuildDate", "total", "start", "display", "items"],
+      "itemCount": 10,
+      "seriesCount": 0,
+      "pointCounts": [],
+      "unit": "api-results",
+      "query": "여행 준비",
+      "total": 1106566,
+      "trend": []
+    },
+    {
+      "api": "trend",
+      "at": "2026-10-21T12:29:44.772Z",
+      "http": 200,
+      "normalized": true,
+      "limitHeaders": {},
+      "fields": ["startDate", "endDate", "timeUnit", "results"],
+      "itemCount": 0,
+      "seriesCount": 1,
+      "pointCounts": [6],
+      "unit": "relative-search-index",
+      "query": "여행 준비",
+      "total": null,
+      "trend": ["추이 판단 보류: 연속 14일 자료 필요"]
+    },
+    {
+      "api": "shopping",
+      "at": "2026-10-21T12:29:44.874Z",
+      "http": 200,
+      "normalized": true,
+      "limitHeaders": {},
+      "fields": ["startDate", "endDate", "timeUnit", "results"],
+      "itemCount": 0,
+      "seriesCount": 1,
+      "pointCounts": [20],
+      "unit": "relative-shopping-click-index",
+      "query": "정장",
+      "total": null,
+      "trend": ["최근 7일 상대 관심도 +8.8% (직전 7일 대비; 실제 검색량 아님)"]
+    }
+  ],
+  "offlineReplay": {
+    "additionalNetworkCalls": 0,
+    "candidates": 17,
+    "kin": 6,
+    "news": 10,
+    "shopping": 1,
+    "manuscriptEvidenceHandoff": true
+  }
+}

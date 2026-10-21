@@ -1,3 +1,4 @@
+import { HubCompetition } from '../components/hub-competition'
 import { readEnvelope } from '../data/storage'
 import { CandidatePanel, type LiveCandidateBatch } from '../components/candidate-panel'
 import { LiveKeywords } from '../components/live-keywords'
@@ -95,6 +96,12 @@ export function Keywords({ notify }: { notify(message: string): void }) {
           sessions.set(sessionKey, batch)
           setLiveBatch(batch)
         }}
+      />
+      <HubCompetition
+        key={`hub:${sessionKey}`}
+        keyword={keyword}
+        live={liveBatch}
+        ideaId={idea?.id ?? null}
       />
       <CandidatePanel key={sessionKey} live={liveBatch} initialIdeaId={idea?.id ?? ''} />
       <ResearchPanel />

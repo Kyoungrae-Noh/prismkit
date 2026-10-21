@@ -29,6 +29,8 @@
   ],
   "secrets": {
     "required": [
+      "NAVER_API_HUB_CLIENT_ID",
+      "NAVER_API_HUB_CLIENT_SECRET",
       "OPENAI_API_KEY",
       "NAVER_SEARCHAD_API_KEY",
       "NAVER_SEARCHAD_SECRET_KEY",

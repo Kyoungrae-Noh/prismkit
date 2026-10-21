@@ -38,20 +38,21 @@ export function Connections() {
           <span className="eyebrow">차근차근 연결하는 가능성</span>
           <h2>수동 자료 저장과 데이터 소스 검증</h2>
           <p>
-            현재 수동 입력 자료와 DEMO 샘플을 구분하여 사용합니다.
+            실제 API 조회와 수동 입력·DEMO 자료를 구분하여 사용합니다.
             <br />
-            검색광고는 키워드 화면에서 로컬 조회할 수 있습니다.
+            글감 발굴과 키워드 분석에서 연결 상태와 조회 결과를 확인하세요.
           </p>
         </div>
         <span className="connection-count">
-          0 <small>/ {connections.length} 운영 연결</small>
+          {sourceAudits.filter((source) => source.verification === 'VERIFIED').length}{' '}
+          <small>개 API 인증 확인</small>
         </span>
       </div>
       <section className="research-panel panel" aria-label="데이터 소스 검증 현황">
         <h2>공식 데이터 소스 검증 현황</h2>
-        <p>검색광고 인증 호출 1건 성공 · VERIFIED 1개 · 로컬 조회 지원</p>
+        <p>검색광고 인증 확인 · 키워드 화면에서 실제 검색량 조회 지원</p>
         <p>
-          API HUB 6종: 이용 조건 확인 전 LIVE 보류 · 인증 호출 미실시.{' '}
+          API HUB 6종: 실제 인증 성공 · 개인 Prismkit 이용 허가 사용자 확인.{' '}
           <Link to="/ideas">글감 발굴·연결 상태 확인</Link>
         </p>
         <div className="research-grid">
@@ -124,10 +125,7 @@ export function Connections() {
       </section>
       <div className="notice">
         <Info size={17} />
-        <span>
-          현재 API 키를 입력할 필요가 없습니다. 외부 서비스 연결 시 사용할 인증과 비밀정보 관리는
-          서버 구성과 함께 추가됩니다.
-        </span>
+        <span>API 인증정보는 서버에서 관리합니다. 화면에 비밀키를 입력할 필요가 없습니다.</span>
       </div>
     </>
   )
