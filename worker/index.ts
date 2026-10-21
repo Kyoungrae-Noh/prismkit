@@ -18,7 +18,15 @@ import {
   type DraftBudget,
 } from '../edge/drafts.ts'
 import type { DraftBrief } from '../src/domain/manuscripts.ts'
-export class SearchAdBudget extends DurableObject<Env & AISettings & DraftSettings> {
+import {
+  queryHub,
+  hubStatus,
+  type HubStore,
+  type HubBudget,
+  type HubCache,
+  type HubSettings,
+} from '../edge/hub.ts'
+export class SearchAdBudget extends DurableObject<Env & AISettings & DraftSettings & HubSettings> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
     this.ctx.storage.sql.exec(
@@ -27,6 +35,74 @@ export class SearchAdBudget extends DurableObject<Env & AISettings & DraftSettin
     this.ctx.storage.sql.exec(
       'CREATE TABLE IF NOT EXISTS cache (keyword TEXT PRIMARY KEY, payload TEXT NOT NULL, expires INTEGER NOT NULL)',
     )
+  }
+  private hubStore(): HubStore {
+    const sql = this.ctx.storage.sql
+    sql.exec('CREATE TABLE IF NOT EXISTS hub_budget (api TEXT PRIMARY KEY, payload TEXT NOT NULL)')
+    sql.exec(
+      'CREATE TABLE IF NOT EXISTS hub_cache (api TEXT PRIMARY KEY, payload TEXT NOT NULL, expires INTEGER NOT NULL)',
+    )
+    sql.exec('DELETE FROM hub_cache WHERE expires<=?', Date.now())
+    return {
+      read: (api) => {
+        const row = sql
+          .exec<{ payload: string }>('SELECT payload FROM hub_budget WHERE api=?', api)
+          .toArray()[0]
+        return row ? (JSON.parse(row.payload) as HubBudget) : null
+      },
+      write: (api, b) => {
+        sql.exec(
+          'INSERT INTO hub_budget(api,payload) VALUES(?,?) ON CONFLICT(api) DO UPDATE SET payload=excluded.payload',
+          api,
+          JSON.stringify(b),
+        )
+      },
+      cached: (api) => {
+        const row = sql
+          .exec<{ payload: string }>('SELECT payload FROM hub_cache WHERE api=?', api)
+          .toArray()[0]
+        return row ? (JSON.parse(row.payload) as HubCache) : null
+      },
+      cache: (api, value) => {
+        if (value)
+          sql.exec(
+            'INSERT INTO hub_cache(api,payload,expires) VALUES(?,?,?) ON CONFLICT(api) DO UPDATE SET payload=excluded.payload,expires=excluded.expires',
+            api,
+            JSON.stringify(value),
+            value.expires,
+          )
+        else sql.exec('DELETE FROM hub_cache WHERE api=?', api)
+      },
+    }
+  }
+  async alarm() {
+    // Only the HUB coordination object schedules this alarm. No other data is touched.
+    const sql = this.ctx.storage.sql
+    sql.exec('DELETE FROM hub_cache WHERE expires<=?', Date.now())
+    const row = sql
+      .exec<{ expires: number }>('SELECT MIN(expires) AS expires FROM hub_cache')
+      .toArray()[0]
+    if (row?.expires) await this.ctx.storage.setAlarm(row.expires)
+  }
+  async hubUsage(): Promise<Response> {
+    try {
+      return Response.json(hubStatus(this.env, this.hubStore()), { headers: securityHeaders })
+    } catch {
+      return failure(503, 'STATE', 'HUB 호출 상태를 읽지 못했습니다.')
+    }
+  }
+  async hubQuery(input: unknown): Promise<Response> {
+    try {
+      // Schedule cleanup before any external request; even a later crash cannot retain cached data indefinitely.
+      const store = this.hubStore()
+      const currentAlarm = await this.ctx.storage.getAlarm()
+      if (currentAlarm === null) await this.ctx.storage.setAlarm(Date.now() + 300000)
+      return Response.json(await queryHub(input, this.env, store), { headers: securityHeaders })
+    } catch (e) {
+      return e instanceof ApiError
+        ? failure(e.status, e.code, e.message)
+        : failure(503, 'STATE', 'HUB 요청 처리 오류')
+    }
   }
   private draftStore(): DraftStore {
     const sql = this.ctx.storage.sql

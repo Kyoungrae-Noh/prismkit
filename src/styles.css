@@ -3320,3 +3320,145 @@ textarea {
 
 .skip-link:not(:focus) { clip-path:inset(50%); width:1px; height:1px; overflow:hidden; white-space:nowrap; }
 .manuscript-setup > summary { padding:12px 0; cursor:pointer; font-weight:600; }
+
+/* Discovery keeps the existing four-menu navigation and contains wide evidence tables. */
+.discovery-panel {
+  padding: 22px;
+  margin-bottom: 24px;
+  min-width: 0;
+}
+.discovery-heading,
+.discovery-actions,
+.discovery-interests {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.discovery-heading {
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.discovery-heading h2 {
+  margin: 0 0 6px;
+}
+.discovery-heading p,
+.discovery-hold {
+  color: var(--muted);
+  font-size: 13px;
+}
+.discovery-interests {
+  margin-bottom: 14px;
+}
+.discovery-interests label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+}
+.discovery-topic {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.discovery-panel input:not([type='checkbox']),
+.discovery-panel select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #dfe4e0;
+  border-radius: 8px;
+  background: white;
+  color: #253b33;
+}
+.discovery-panel input[type='checkbox'] {
+  width: auto;
+}
+.discovery-settings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+.discovery-settings label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+.discovery-advanced {
+  margin-top: 12px;
+  font-size: 13px;
+}
+.discovery-advanced summary {
+  cursor: pointer;
+  padding: 10px 0;
+}
+.discovery-panel .table-scroll {
+  max-width: 100%;
+  overflow: auto;
+}
+.discovery-panel table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.discovery-panel th,
+.discovery-panel td {
+  text-align: left;
+  padding: 12px;
+  vertical-align: top;
+  border-bottom: 1px solid #e6ebe7;
+  font-size: 13px;
+}
+.discovery-table {
+  min-width: 760px;
+}
+.discovery-table td:last-child {
+  width: 230px;
+  min-width: 230px;
+}
+.discovery-table td:last-child .discovery-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.discovery-table td:last-child .button {
+  padding: 8px;
+  font-size: 12px;
+}
+.discovery-table small {
+  display: block;
+  margin-top: 6px;
+  color: #607169;
+}
+.discovery-message {
+  padding: 12px;
+  background: #f0f5ee;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+.discovery-evidence {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid #e6ebe7;
+  overflow-wrap: anywhere;
+}
+.discovery-evidence details {
+  padding: 12px 0;
+}
+.discovery-evidence article {
+  padding: 12px;
+  background: #f7f9f6;
+  margin: 8px 0;
+}
+@media (max-width: 700px) {
+  .discovery-panel {
+    padding: 14px;
+  }
+  .discovery-settings {
+    grid-template-columns: 1fr;
+  }
+  .discovery-actions .button {
+    font-size: 12px;
+    padding: 9px 11px;
+  }
+}

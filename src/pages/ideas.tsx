@@ -5,6 +5,7 @@ import { useWorkspace } from '../app/workspace'
 import { IdeaForm } from '../components/idea-form'
 import { EmptyState, formatDate, Modal, StatusBadge } from '../components/ui'
 import { categories, statuses, statusLabels, type Idea } from '../domain/models'
+import { DiscoveryPanel } from '../components/discovery-panel'
 
 export function Ideas({ onCreate, notify }: { onCreate(): void; notify(message: string): void }) {
   const { ideas, removeIdea } = useWorkspace()
@@ -62,6 +63,7 @@ export function Ideas({ onCreate, notify }: { onCreate(): void; notify(message: 
           <Plus size={18} />새 글감 추가
         </button>
       </div>
+      <DiscoveryPanel />
       <div className="summary-strip">
         <div>
           <span className="summary-icon">

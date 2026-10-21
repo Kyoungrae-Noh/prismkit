@@ -1,4 +1,5 @@
 import type { VerificationStatus } from '../domain/research'
+import { hubApis, hubLabels } from './hub-types'
 export interface SourceAudit {
   id: string
   name: string
@@ -20,26 +21,19 @@ export const sourceAudits: SourceAudit[] = [
     usageApproved: false,
     note: '단일 GET 인증 성공(HTTP 200). 로컬 조회 가능. 상업 이용·영구 저장 조건은 미확인.',
   },
-  {
-    id: 'trend',
-    name: '네이버 데이터랩 · API HUB',
+  ...hubApis.map((api): SourceAudit => ({
+    id: api,
+    name: `네이버 ${hubLabels[api]} · API HUB`,
     verification: 'DOCUMENTED',
-    documentation: 'https://api.ncloud-docs.com/docs/naver-api-hub-search-trend',
-    checkedDate: '2026-10-19',
+    documentation: `https://api.ncloud-docs.com/docs/naver-api-hub-${api === 'shopping' ? 'shopping-insight-keywords' : `search-${api === 'cafe' ? 'cafearticle' : api}`}.md`,
+    checkedDate: '2026-10-21',
     authenticatedTestAt: null,
     usageApproved: false,
-    note: '상대 관심도이며 절대 검색량이 아닙니다. 신규 API HUB Client ID·Secret 필요.',
-  },
-  {
-    id: 'blog',
-    name: '네이버 블로그 검색 · API HUB',
-    verification: 'DOCUMENTED',
-    documentation: 'https://api.ncloud-docs.com/docs/naver-api-hub-search-blog',
-    checkedDate: '2026-10-19',
-    authenticatedTestAt: null,
-    usageApproved: false,
-    note: 'API total과 게시물 메타데이터. 통합검색 실제 순위나 전체 문서 수로 단정할 수 없습니다.',
-  },
+    note:
+      api === 'trend' || api === 'shopping'
+        ? '상대 관심도 어댑터·모의 검증 완료. 저장·상업 활용 조건 확인 전 LIVE 보류; 실제 인증 호출 미실시.'
+        : '어댑터·모의 검증 완료. 검색 결과 저장·가공·AI·수익화 활용은 NAVER 별도 허가 확인 전 LIVE 보류.',
+  })),
   {
     id: 'autocomplete',
     name: '자동완성·검색화면 연관검색어',

@@ -11,6 +11,7 @@ import {
   Search,
 } from 'lucide-react'
 import { useWorkspace } from '../app/workspace'
+import { Link } from 'react-router-dom'
 
 export function Connections() {
   const { connections } = useWorkspace()
@@ -49,6 +50,10 @@ export function Connections() {
       <section className="research-panel panel" aria-label="데이터 소스 검증 현황">
         <h2>공식 데이터 소스 검증 현황</h2>
         <p>검색광고 인증 호출 1건 성공 · VERIFIED 1개 · 로컬 조회 지원</p>
+        <p>
+          API HUB 6종: 이용 조건 확인 전 LIVE 보류 · 인증 호출 미실시.{' '}
+          <Link to="/ideas">글감 발굴·연결 상태 확인</Link>
+        </p>
         <div className="research-grid">
           {sourceAudits.map((source) => (
             <article key={source.id}>

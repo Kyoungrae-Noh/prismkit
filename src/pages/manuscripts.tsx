@@ -111,6 +111,9 @@ export function ManuscriptsPage() {
         a?.reviewmanUrl ? `내부 링크 후보 (내용·날짜 확인 후 출처 추가): ${a.reviewmanUrl}` : '',
         `검색량 ${c.candidate.mode}: PC ${c.candidate.pc ?? '미확인'} / 모바일 ${c.candidate.mobile ?? '미확인'} / 합계 ${c.candidate.total ?? '미확인'}; ${c.candidate.source}; ${c.candidate.collectedAt ?? '시각 미확인'}`,
         `경쟁 문서 수: ${ranked?.documents?.count ?? '미확인'}`,
+        ...(c.candidate.source === 'NAVER API HUB 발굴'
+          ? c.candidate.reasons.map((r) => `발굴 검토: ${r}`)
+          : []),
         d
           ? `사용자 승인 캡처 인용: ${d.ai?.evidence ?? d.summary}\n추가 확인: ${d.uncertain}`
           : '캡처 근거 미연결',

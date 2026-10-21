@@ -1,6 +1,7 @@
 import { handleProtected, failure } from '../edge/security.ts'
 import { draftRoute } from '../edge/draft-route.ts'
 import { aiRoute } from '../edge/ai-route.ts'
+import { hubRoute } from '../edge/hub-route.ts'
 export const onRequest: PagesFunction<
   Omit<PagesEnv, 'SEARCHAD'> & Pick<Env, 'SEARCHAD'> & { AI_ENABLED?: string }
 > = async (context) => {
@@ -36,6 +37,10 @@ export const onRequest: PagesFunction<
           : aiRoute(context.request, context.env.AI_ENABLED === 'true', () =>
               context.env.SEARCHAD.get(context.env.SEARCHAD.idFromName('prismkit-ai-v1')),
             ),
+      () =>
+        hubRoute(context.request, () =>
+          context.env.SEARCHAD.get(context.env.SEARCHAD.idFromName('prismkit-hub-v1')),
+        ),
     )
     return upstream && !upstream.ok ? upstream : response
   } catch {

@@ -89,6 +89,35 @@ for (const approved of [false, true])
           reservedUsd: approved ? 0 : null,
         })
       }
+      const hubHeaders = { 'cf-access-jwt-assertion': token, 'x-prismkit-request': 'hub-query' }
+      const hub = await runtime.dispatchFetch('https://prismkit.online/api/hub/status', {
+        headers: hubHeaders,
+      })
+      assert.equal(hub.status, 200)
+      const hubState = await hub.json()
+      assert.equal(hubState.configured, false)
+      assert.equal(hubState.apis.length, 6)
+      assert.ok(hubState.apis.every((a) => !a.enabled && a.dailyUsed === 0 && a.monthlyUsed === 0))
+      for (const api of ['blog', 'cafe', 'kin', 'news', 'trend', 'shopping']) {
+        const blockedHub = await runtime.dispatchFetch('https://prismkit.online/api/hub/query', {
+          method: 'POST',
+          headers: { ...hubHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api,
+            query: '테스트',
+            startDate: '2026-01-01',
+            endDate: '2026-01-14',
+            category: '50000000',
+          }),
+        })
+        assert.equal(blockedHub.status, 403)
+        assert.equal((await blockedHub.json()).error.code, 'POLICY_HOLD')
+      }
+      const noAuthHub = await runtime.dispatchFetch('https://prismkit.online/api/hub/status', {
+        headers: { 'x-prismkit-request': 'hub-query' },
+      })
+      assert.equal(noAuthHub.status, 401)
+      await noAuthHub.arrayBuffer()
       assert.equal(outboundCalls, 0)
     } finally {
       await runtime.dispose()
