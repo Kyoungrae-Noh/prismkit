@@ -10,7 +10,15 @@ import { currentBudget, budgetUsage } from '../server/searchad/budget.ts'
 import { ApiError } from '../server/searchad/service.ts'
 import { failure, securityHeaders } from '../edge/security.ts'
 import { aiStatus, extractAI, type AISettings, type AIStore, type AIBudget } from '../edge/ai.ts'
-export class SearchAdBudget extends DurableObject<Env & AISettings> {
+import {
+  draftStatus,
+  generateDraft,
+  type DraftSettings,
+  type DraftStore,
+  type DraftBudget,
+} from '../edge/drafts.ts'
+import type { DraftBrief } from '../src/domain/manuscripts.ts'
+export class SearchAdBudget extends DurableObject<Env & AISettings & DraftSettings> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
     this.ctx.storage.sql.exec(
@@ -19,6 +27,44 @@ export class SearchAdBudget extends DurableObject<Env & AISettings> {
     this.ctx.storage.sql.exec(
       'CREATE TABLE IF NOT EXISTS cache (keyword TEXT PRIMARY KEY, payload TEXT NOT NULL, expires INTEGER NOT NULL)',
     )
+  }
+  private draftStore(): DraftStore {
+    const sql = this.ctx.storage.sql
+    sql.exec(
+      'CREATE TABLE IF NOT EXISTS draft_budget (id INTEGER PRIMARY KEY CHECK(id=1), payload TEXT NOT NULL)',
+    )
+    return {
+      read: () => {
+        const row = sql
+          .exec<{ payload: string }>('SELECT payload FROM draft_budget WHERE id=1')
+          .toArray()[0]
+        return row ? (JSON.parse(row.payload) as DraftBudget) : null
+      },
+      write: (v) => {
+        sql.exec(
+          'INSERT INTO draft_budget(id,payload) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload',
+          JSON.stringify(v),
+        )
+      },
+    }
+  }
+  async draftUsage(): Promise<Response> {
+    try {
+      return Response.json(draftStatus(this.env, this.draftStore()), { headers: securityHeaders })
+    } catch {
+      return failure(503, 'STATE', '원고 예산을 확인할 수 없습니다.')
+    }
+  }
+  async draftGenerate(brief: DraftBrief, id: string): Promise<Response> {
+    try {
+      return Response.json(await generateDraft(brief, id, this.env, this.draftStore()), {
+        headers: securityHeaders,
+      })
+    } catch (e) {
+      return e instanceof ApiError
+        ? failure(e.status, e.code, e.message)
+        : failure(503, 'STATE', '원고 서버 저장 오류')
+    }
   }
   private aiStore(): AIStore {
     const sql = this.ctx.storage.sql

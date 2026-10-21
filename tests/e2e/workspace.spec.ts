@@ -12,6 +12,7 @@ test('all routes render without page overflow or runtime errors', async ({ page 
     ['/publishing', '경쟁 분석'],
     ['/captures', '캡처 글감 수집'],
     ['/recommendations', '발행 후보 TOP 10'],
+    ['/manuscripts', '원고 작업실'],
   ]) {
     await page.goto(path)
     await expect(page.getByRole('heading', { name: new RegExp(heading), level: 1 })).toBeVisible()

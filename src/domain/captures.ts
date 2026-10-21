@@ -36,6 +36,7 @@ export interface CaptureDraft {
   category: Category
   uncertain: string
   confirmed: boolean
+  excluded?: boolean
   mode: 'MANUAL' | 'AI'
   ideaId: string | null
   timeliness: string
@@ -55,6 +56,8 @@ export interface CaptureDraft {
 export interface RankingSettings {
   min: string
   documentsMax: string
+  max?: string
+  documentsMin?: string
   category: string
   sort: 'priority' | 'volume'
 }
@@ -128,8 +131,9 @@ function text(value: unknown, max: number) {
 export function validateDraft(d: CaptureDraft) {
   fields(
     d,
-    'id imageIds title topic keyword source publishedDate summary intent category uncertain confirmed mode ideaId timeliness reviewman monetization ai',
+    'id imageIds title topic keyword source publishedDate summary intent category uncertain confirmed excluded mode ideaId timeliness reviewman monetization ai',
   )
+  if (d.excluded !== undefined && typeof d.excluded !== 'boolean') throw new Error('제외 상태 오류')
   text(d.id, 100)
   if (!d.id) throw new Error('글감 ID가 필요합니다.')
   for (const key of ['title', 'topic', 'intent'] as const) text(d[key], 120)
@@ -228,13 +232,13 @@ export function validateCaptures(d: CaptureData): CaptureData {
     throw new Error('없는 원본 이미지를 참조합니다.')
   if (d.report !== null) {
     fields(d.report, 'at settings candidateIds entries')
-    fields(d.report.settings, 'min documentsMax category sort')
+    fields(d.report.settings, 'min max documentsMin documentsMax category sort')
     const s = d.report.settings
     if (
       !Number.isFinite(Date.parse(d.report.at)) ||
       !['priority', 'volume'].includes(s.sort) ||
       !['all', ...categories].includes(s.category) ||
-      ![s.min, s.documentsMax].every(
+      ![s.min, s.documentsMax, s.max ?? '', s.documentsMin ?? ''].every(
         (v) =>
           typeof v === 'string' &&
           (v === '' || (/^\d+$/.test(v) && Number.isSafeInteger(Number(v)))),

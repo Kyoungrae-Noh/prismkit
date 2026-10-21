@@ -122,6 +122,8 @@ it('keeps low volume with filters cleared, excludes DEMO and stale evidence', ()
   s.item.candidate.mode = 'LIVE'
   s.item.candidate.collectedAt = '2000-01-01'
   expect(run(s)[0].status).toBe('데이터 부족')
+  const research = [1, 2].map((id) => ({ id:String(id), keyword:s.item.candidate.keyword, related:[], intent:'', ideaId:null, pc:null, mobile:null, blogTotal:id*100, documentScope:'블로그 전체 기간',source:'수동 검색', checkedDate:today(), mode:'MANUAL' as const,verification:'UNVERIFIED' as const,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() }))
+  expect(rankCandidates([s.item],[],research,s.publishing,emptyCaptures(),defaultRanking)[0].status).toBe('데이터 부족')
 })
 it('exclusion and duplicate planning override favorable demand', () => {
   const s = seed()
@@ -141,4 +143,38 @@ it('exclusion and duplicate planning override favorable demand', () => {
     ideaId: null,
   })
   expect(run(t)[0].status).not.toBe('발행 검토 추천')
+})
+it('competition totals require their own provenance and conflicting evidence never recommends', () => {
+  const s = seed()
+  s.item.candidate.documents = undefined
+  s.publishing.analyses[0].total = 200
+  expect(run(s)[0].status).toBe('데이터 부족')
+  Object.assign(s.publishing.analyses[0], {
+    documentSource: '수동 검색',
+    documentScope: '블로그 전체 기간',
+  })
+  expect(run(s)[0].documents?.count).toBe(200)
+  s.item.candidate.documents = {
+    count: 999,
+    source: '다른 자료',
+    scope: '블로그 전체 기간',
+    checkedDate: today(),
+  }
+  expect(run(s)[0].status).toBe('데이터 부족')
+})
+it('custom range boundaries are inclusive and filters never delete saved candidates', () => {
+  const s = seed()
+  expect(
+    run(s, {
+      ...defaultRanking,
+      min: '4000',
+      max: '4000',
+      documentsMin: '200',
+      documentsMax: '200',
+    }),
+  ).toHaveLength(1)
+  expect(run(s, { ...defaultRanking, max: '3999' })).toHaveLength(0)
+  expect(run(s, { ...defaultRanking, documentsMin: '201' })).toHaveLength(0)
+  expect(() => run(s, { ...defaultRanking, min: '4000', max: '3000' })).toThrow()
+  expect(run(s)).toHaveLength(1)
 })

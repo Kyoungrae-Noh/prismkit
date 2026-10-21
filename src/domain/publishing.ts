@@ -39,6 +39,8 @@ export interface Competition {
   position: 'unknown' | 'top' | 'middle' | 'bottom' | 'absent'
   serp: 'unknown' | 'information' | 'commercial' | 'mixed'
   total: number | null
+  documentSource?: string
+  documentScope?: string
   reviewmanUrl: string
   posts: Competitor[]
   quality: Quality
@@ -185,6 +187,8 @@ export function validateCompetition(value: Competition) {
     throw new Error('연결 후보와 키워드가 필요합니다.')
   text(value.searchUrl)
   if (value.searchUrl) validateSearchUrl(value.searchUrl, value.keyword)
+  if (value.documentSource !== undefined) text(value.documentSource, 500)
+  if (value.documentScope !== undefined) text(value.documentScope, 500)
   date(value.checkedDate)
   for (const answer of [
     value.blog,

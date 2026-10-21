@@ -1,4 +1,5 @@
 import { handleProtected, failure } from '../edge/security.ts'
+import { draftRoute } from '../edge/draft-route.ts'
 import { aiRoute } from '../edge/ai-route.ts'
 export const onRequest: PagesFunction<
   Omit<PagesEnv, 'SEARCHAD'> & Pick<Env, 'SEARCHAD'> & { AI_ENABLED?: string }
@@ -28,9 +29,13 @@ export const onRequest: PagesFunction<
         return await upstream.json()
       },
       () =>
-        aiRoute(context.request, context.env.AI_ENABLED === 'true', () =>
-          context.env.SEARCHAD.get(context.env.SEARCHAD.idFromName('prismkit-ai-v1')),
-        ),
+        new URL(context.request.url).pathname.startsWith('/api/ai/drafts/')
+          ? draftRoute(context.request, () =>
+              context.env.SEARCHAD.get(context.env.SEARCHAD.idFromName('prismkit-drafts-v1')),
+            )
+          : aiRoute(context.request, context.env.AI_ENABLED === 'true', () =>
+              context.env.SEARCHAD.get(context.env.SEARCHAD.idFromName('prismkit-ai-v1')),
+            ),
     )
     return upstream && !upstream.ok ? upstream : response
   } catch {

@@ -1,3 +1,5 @@
+import { DRAFT_KEY, validateManuscripts, type Manuscript } from '../domain/manuscripts'
+import { createManuscriptStore } from './manuscript-store'
 import { createLocalRepository, STORAGE_KEY } from './local-repository'
 import { createResearchStore, RESEARCH_KEY } from './research-store'
 import { createCandidateStore, CANDIDATE_KEY, type SavedCandidate } from './candidate-store'
@@ -26,6 +28,7 @@ export interface Backup {
   candidates: SavedCandidate[]
   publishing: PublishingData
   captures?: CaptureData
+  manuscripts?: Manuscript[]
   captureFiles?: Record<string, string>
 }
 function fields(value: unknown, allowed: string) {
@@ -40,7 +43,11 @@ function fields(value: unknown, allowed: string) {
     )
 }
 function shapes(b: Backup) {
-  fields(b, 'format version exportedAt ideas research candidates publishing captures captureFiles')
+  fields(
+    b,
+    'format version exportedAt ideas research candidates publishing captures captureFiles manuscripts',
+  )
+  if (b.manuscripts !== undefined) validateManuscripts(b.manuscripts)
   if (b.version === 1 && (b.captures !== undefined || b.captureFiles !== undefined))
     throw new Error('캡처는 version 2 백업이 필요합니다.')
   for (const x of b.ideas) fields(x, 'id title keyword category status memo createdAt updatedAt')
@@ -71,7 +78,7 @@ function shapes(b: Backup) {
   for (const x of b.publishing.analyses) {
     fields(
       x,
-      'candidateId keyword searchUrl checkedDate blog dominant position serp total reviewmanUrl posts quality missingInfo excludeReason images updatedAt',
+      'candidateId keyword searchUrl checkedDate documentSource documentScope blog dominant position serp total reviewmanUrl posts quality missingInfo excludeReason images updatedAt',
     )
     fields(
       x.quality,
@@ -93,6 +100,7 @@ function datasets(b: Backup) {
     [RESEARCH_KEY]: JSON.stringify({ version: 1, records: b.research }),
     [CANDIDATE_KEY]: JSON.stringify({ version: 1, items: b.candidates }),
     [PUBLISHING_KEY]: JSON.stringify(b.publishing),
+    [DRAFT_KEY]: b.manuscripts ? JSON.stringify(b.manuscripts) : null,
     [CAPTURE_KEY]: b.captures ? JSON.stringify(b.captures) : null,
   }
 }
@@ -119,6 +127,7 @@ export async function exportWorkspace(
     publishing: createPublishingStore(port).read(),
     captures: createCaptureStore(port).read(),
     captureFiles: {},
+    manuscripts: createManuscriptStore(port).read(),
   }
   for (const meta of b.captures!.images)
     b.captureFiles![meta.id] = await blobDataUrl(await vault.get(meta.id))
@@ -196,6 +205,7 @@ export function backupCounts(b: Backup) {
     캡처: b.publishing.analyses.reduce((n, x) => n + x.images.length, 0),
     글감캡처: b.captures?.images.length ?? 0,
     추출글감: b.captures?.drafts.length ?? 0,
+    원고: b.manuscripts?.length ?? 0,
     추천기록: b.captures?.report?.candidateIds.length ?? 0,
   }
 }
@@ -205,6 +215,7 @@ export function compareBackups(current: Backup, incoming: Backup) {
     added = 0,
     removed = 0
   const pairs = [
+    [current.manuscripts ?? [], incoming.manuscripts ?? current.manuscripts ?? []],
     [current.ideas, incoming.ideas],
     [current.research, incoming.research],
     [current.candidates, incoming.candidates],
@@ -249,6 +260,7 @@ export async function restoreWorkspace(
   if (JSON.stringify(rawSnapshot(storage)) !== expected)
     throw new Error('미리보기 이후 자료가 변경되었습니다. 다시 비교하세요.')
   const next = datasets(checked)
+  if (checked.manuscripts === undefined) next[DRAFT_KEY] = previous[DRAFT_KEY]
   if (checked.version === 1) {
     const kept = previous[CAPTURE_KEY]
     const legacy = kept ? validateCaptures(JSON.parse(kept)) : emptyCaptures()

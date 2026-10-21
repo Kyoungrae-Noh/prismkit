@@ -51,6 +51,9 @@ test('compiled Pages routing protects SPA, assets, API and preview hosts using r
       '/publishing',
       '/assets/app.js',
       '/api/searchad/keyword?keyword=test',
+      '/api/ai/drafts/status',
+      '/api/ai/drafts/generate',
+      '/manuscripts',
       '/api/ai/status',
       '/api/ai/extract',
     ]) {

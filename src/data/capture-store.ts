@@ -26,7 +26,8 @@ export async function linkCaptureIdea(storage: StoragePort, draftId: string) {
     expected = JSON.stringify(snapshot)
   const data = createCaptureStore(storage).read(),
     draft = data.drafts.find((d) => d.id === draftId)
-  if (!draft || !draft.confirmed) throw new Error('원본 대조 및 불명확한 정보 확인 후 저장하세요.')
+  if (!draft || draft.excluded || !draft.confirmed)
+    throw new Error('원본 대조 및 불명확한 정보 확인 후 저장하세요.')
   const ideas = await createLocalRepository({
     getItem: (k) => snapshot[k] ?? null,
     setItem: () => {

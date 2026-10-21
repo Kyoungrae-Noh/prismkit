@@ -17,12 +17,15 @@ export const rankingStatuses = [
   '롱테일 전환 추천',
   '경쟁 추가 조사 필요',
   '데이터 부족',
+  '발행 보류',
   '발행 제외',
 ] as const
 export type RankingStatus = (typeof rankingStatuses)[number]
 export const rankingPresets = {
   opportunity: { label: '수요·경쟁 실험', min: '3000', documentsMax: '1000' },
-  low: { label: '저경쟁 실험', min: '500', documentsMax: '300' },
+  low: { label: '저경쟁 실험', min: '', documentsMax: '300' },
+  low500: { label: '저경쟁 500개', min: '', documentsMax: '500' },
+  demand: { label: '월 3,000회 이상', min: '3000', documentsMax: '' },
   broad: { label: '전체 근거 검토', min: '', documentsMax: '' },
 } as const
 export const defaultRanking: RankingSettings = {
@@ -41,11 +44,18 @@ export function rankCandidates(
   now = Date.now(),
 ) {
   if (
-    ![settings.min, settings.documentsMax].every(
+    ![settings.min, settings.documentsMax, settings.max ?? '', settings.documentsMin ?? ''].every(
       (v) => v === '' || (/^\d+$/.test(v) && Number.isSafeInteger(Number(v))),
     )
   )
     throw new Error('필터는 0 이상의 정수로 입력하세요.')
+  if (
+    (settings.min && settings.max && Number(settings.min) > Number(settings.max)) ||
+    (settings.documentsMin &&
+      settings.documentsMax &&
+      Number(settings.documentsMin) > Number(settings.documentsMax))
+  )
+    throw new Error('최솟값은 최댓값보다 클 수 없습니다.')
   const age = (time: string | null) => (time ? (now - Date.parse(time)) / 86400000 : Infinity)
   const grouped = new Map<string, SavedCandidate[]>()
   for (const item of saved.filter((s) => s.candidate.mode !== 'DEMO')) {
@@ -91,7 +101,30 @@ export function rankCandidates(
           checkedDate: matches[0].checkedDate,
           scope: matches[0].documentScope!,
         }
+      if (
+        competition?.documentSource &&
+        competition.documentScope &&
+        competition.searchUrl &&
+        validDocuments({
+          count: competition.total,
+          source: competition.documentSource,
+          checkedDate: competition.checkedDate,
+          scope: competition.documentScope,
+        })
+      ) {
+        const recorded = {
+          count: competition.total,
+          source: competition.documentSource,
+          checkedDate: competition.checkedDate,
+          scope: competition.documentScope,
+        }
+        documents =
+          documents && (documents.count !== recorded.count || documents.scope !== recorded.scope)
+            ? undefined
+            : recorded
+      }
       if (matches.length > 1) documents = undefined
+
       const volumeKnown =
         typeof c.total === 'number' &&
         c.total === totalVolume(c.pc, c.mobile) &&
@@ -136,6 +169,7 @@ export function rankCandidates(
       reasons.push(...duplicates.map((d) => d.message))
       let status: RankingStatus = '경쟁 추가 조사 필요'
       if (assessment.status === '발행 제외' || c.status === '제외 후보') status = '발행 제외'
+      else if (duplicate) status = '발행 보류'
       else if (!volumeKnown || !documentKnown) status = '데이터 부족'
       else if (
         assessment.status === '진입 검토 가능' &&
@@ -182,6 +216,10 @@ export function rankCandidates(
         (settings.category === 'all' || r.category === settings.category) &&
         (!settings.min ||
           (r.volumeKnown && (r.item.candidate.total as number) >= Number(settings.min))) &&
+        (!settings.max ||
+          (r.volumeKnown && (r.item.candidate.total as number) <= Number(settings.max))) &&
+        (!settings.documentsMin ||
+          (!!r.documents && r.documents.count! >= Number(settings.documentsMin))) &&
         (!settings.documentsMax ||
           (!!r.documents && r.documents.count! <= Number(settings.documentsMax))),
     )

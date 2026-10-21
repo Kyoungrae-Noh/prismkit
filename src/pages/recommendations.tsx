@@ -120,7 +120,13 @@ export function RecommendationsPage() {
               onChange={(e) => {
                 if (e.target.value === 'custom') return
                 const p = rankingPresets[e.target.value as keyof typeof rankingPresets]
-                setSettings({ ...settings, min: p.min, documentsMax: p.documentsMax })
+                setSettings({
+                  ...settings,
+                  min: p.min,
+                  documentsMax: p.documentsMax,
+                  max: '',
+                  documentsMin: '',
+                })
               }}
             >
               <option value="custom">사용자 지정</option>
@@ -137,6 +143,22 @@ export function RecommendationsPage() {
               inputMode="numeric"
               value={settings.min}
               onChange={(e) => setSettings({ ...settings, min: e.target.value })}
+            />
+          </label>
+          <label>
+            최대 월 검색량
+            <input
+              inputMode="numeric"
+              value={settings.max ?? ''}
+              onChange={(e) => setSettings({ ...settings, max: e.target.value })}
+            />
+          </label>
+          <label>
+            최소 경쟁 문서 수
+            <input
+              inputMode="numeric"
+              value={settings.documentsMin ?? ''}
+              onChange={(e) => setSettings({ ...settings, documentsMin: e.target.value })}
             />
           </label>
           <label>
@@ -290,7 +312,10 @@ export function RecommendationsPage() {
                   {index + 1}. {r.title}
                 </h3>
                 <strong>
-                  {r.status} · 검토 점수 {r.score}
+                  {['데이터 부족', '경쟁 추가 조사 필요'].includes(r.status)
+                    ? '추가 조사 필요 · ' + r.status
+                    : r.status}{' '}
+                  · 검토 점수 {r.score}
                 </strong>
                 {fields(r)}
                 {actions(r)}
@@ -307,7 +332,10 @@ export function RecommendationsPage() {
               <article className="capture-draft" key={r.id}>
                 <h3>{r.title}</h3>
                 <strong>
-                  {r.status} · 검토 점수 {r.score}
+                  {['데이터 부족', '경쟁 추가 조사 필요'].includes(r.status)
+                    ? '추가 조사 필요 · ' + r.status
+                    : r.status}{' '}
+                  · 검토 점수 {r.score}
                 </strong>
                 {fields(r)}
                 {actions(r)}
@@ -340,6 +368,9 @@ export function RecommendationsPage() {
   function actions(r: (typeof rows)[number]) {
     return (
       <>
+        <Link className="button primary" to={`/manuscripts?candidate=${encodeURIComponent(r.id)}`}>
+          이 후보로 원고 작성
+        </Link>
         <details>
           <summary>추천 이유·추가 확인 사항</summary>
           <ul>

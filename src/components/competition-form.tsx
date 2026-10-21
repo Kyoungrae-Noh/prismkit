@@ -116,6 +116,22 @@ export function CompetitionForm({
             />
           </label>
           <label>
+            문서 수 데이터 출처
+            <input
+              value={draft.documentSource ?? ''}
+              onChange={(e) => patch({ documentSource: e.target.value })}
+            />
+          </label>
+          <label>
+            문서 수 검색 범위
+            <input
+              placeholder="예: 블로그 탭 · 전체 기간 · 정확 검색어"
+              value={draft.documentScope ?? ''}
+              onChange={(e) => patch({ documentScope: e.target.value })}
+            />
+          </label>
+          <p>출처·확인 날짜·검색 범위·실제 검색 URL이 없는 수치는 추천 근거로 사용하지 않습니다.</p>
+          <label>
             Reviewman 연결 URL
             <input
               value={draft.reviewmanUrl}

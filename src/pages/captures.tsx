@@ -58,6 +58,7 @@ export function CapturesPage() {
   const [aiBusy, setAiBusy] = useState(false),
     [approveAll, setApproveAll] = useState(false)
   const [deletingDraft, setDeletingDraft] = useState<string | null>(null)
+  const [selectedDrafts, setSelectedDrafts] = useState<string[]>([])
   const queue = useRef<ReturnType<typeof createCaptureQueue> | null>(null)
   const dragDepth = useRef(0)
   const [dragging, setDragging] = useState(false)
@@ -363,7 +364,10 @@ export function CapturesPage() {
                 action(() => {
                   const eligible = data.drafts.filter(
                     (d) =>
-                      d.title.trim() && d.keyword.trim() && (d.mode !== 'AI' || d.imageIds.length),
+                      !d.excluded &&
+                      d.title.trim() &&
+                      d.keyword.trim() &&
+                      (d.mode !== 'AI' || d.imageIds.length),
                   )
                   save({
                     ...data,
@@ -519,164 +523,253 @@ export function CapturesPage() {
             </div>
           </form>
         )}
+        {!!data.drafts.length && (
+          <div className="capture-actions">
+            <span>선택 {selectedDrafts.length}개</span>
+            <button
+              className="button secondary"
+              disabled={!selectedDrafts.length || busy || aiBusy}
+              onClick={() =>
+                action(() =>
+                  save({
+                    ...data,
+                    drafts: data.drafts.map((d) =>
+                      selectedDrafts.includes(d.id)
+                        ? { ...d, excluded: true, confirmed: false }
+                        : d,
+                    ),
+                  }),
+                )
+              }
+            >
+              선택 글감 제외
+            </button>
+            <p>제외는 원본과 추출 내용을 보존합니다. 상세 화면에서 다시 검토할 수 있습니다.</p>
+          </div>
+        )}
         {data.drafts.map((d) => (
           <article
-            className="capture-draft"
+            className="capture-draft capture-list-row"
             id={`draft-${d.id}`}
             key={d.id}
             aria-label={`${d.title || '제목 미입력'} 추출 글감`}
           >
-            <h3>{d.title || '제목 미입력'}</h3>
-            <p>
-              {d.mode === 'MANUAL' ? 'MANUAL · 사용자 입력' : 'AI 추출 · 사용자 검토 필요'} ·{' '}
-              {d.confirmed ? '사용자 대조 완료' : '확인 필요'}
-              {groups.some((g) => g.includes(d.id)) ? ' · 동일 제목 중복 후보' : ''}
-            </p>
-            <p>
-              키워드: {d.keyword || '미입력'} · 출처: {d.source || '미확인'} · 게시 날짜:{' '}
-              {d.publishedDate || '미확인'}
-            </p>
-            <p>
-              원본:{' '}
-              {d.imageIds.map((id) => data.images.find((i) => i.id === id)?.name).join(', ') ||
-                '연결 없음'}
-            </p>
-            {d.ai && (
-              <p>
-                판독: {d.ai.provider} / {d.ai.model} · {d.ai.at} ·{' '}
-                {d.ai.edited ? '사용자 수정됨' : '원본 AI 결과'}
-                <br />
-                원본 인용: {d.ai.evidence}
-                <br />
-                출처 근거: {d.ai.sourceEvidence || '미확인'} · 날짜 근거:{' '}
-                {d.ai.dateEvidence || '미확인'}
-              </p>
-            )}
-            {d.imageIds.map((id) => (
-              <a className="text-link" key={id} href={`#image-${id}`}>
-                원본 미리보기 ·{' '}
-              </a>
-            ))}
-            {d.ai && d.ai.keywords.length > 1 && (
+            <div className="capture-row-select">
               <label>
-                분석할 핵심 키워드 선택
-                <select
-                  value={d.keyword}
+                <input
+                  type="checkbox"
+                  aria-label={`${d.title} 선택`}
+                  checked={selectedDrafts.includes(d.id)}
                   onChange={(e) =>
-                    action(() =>
-                      save({
-                        ...data,
-                        drafts: data.drafts.map((row) =>
-                          row.id === d.id
-                            ? {
-                                ...row,
-                                keyword: e.target.value,
-                                confirmed: false,
-                                ai: { ...d.ai!, edited: true },
-                              }
-                            : row,
-                        ),
-                      }),
+                    setSelectedDrafts(
+                      e.target.checked
+                        ? [...selectedDrafts, d.id]
+                        : selectedDrafts.filter((id) => id !== d.id),
                     )
                   }
-                >
-                  <option value={d.keyword}>{d.keyword}</option>
-                  {d.ai.keywords
-                    .filter((k) => k !== d.keyword)
-                    .map((k) => (
-                      <option key={k}>{k}</option>
-                    ))}
-                </select>
+                />
+                선택
               </label>
-            )}
-            <p>{d.summary}</p>
-            {d.uncertain && <p>추가 확인: {d.uncertain}</p>}
-            <div className="capture-actions">
-              <button className="button secondary" onClick={() => setEditing(structuredClone(d))}>
-                추출 결과 수정
-              </button>
-              <button
-                className="button secondary"
-                disabled={busy || aiBusy}
-                onClick={() => setDeletingDraft(d.id)}
-              >
-                추출 글감 삭제
-              </button>
-              {deletingDraft === d.id && (
-                <div>
-                  <p>
-                    이 추출 글감만 삭제합니다. 원본 이미지와 이미 연결한 업무 글감은 유지됩니다.
-                  </p>
-                  <button
-                    className="button secondary"
-                    disabled={busy || aiBusy}
-                    onClick={() =>
-                      action(() => {
-                        save({ ...data, drafts: data.drafts.filter((row) => row.id !== d.id) })
-                        setDeletingDraft(null)
-                        if (editing?.id === d.id) setEditing(null)
-                      })
-                    }
-                  >
-                    추출 글감 삭제 확인
-                  </button>
-                  <button className="button secondary" onClick={() => setDeletingDraft(null)}>
-                    삭제 취소
-                  </button>
-                </div>
-              )}
-              <button
-                className="button secondary"
-                disabled={
-                  d.confirmed ||
-                  !d.title.trim() ||
-                  !d.keyword.trim() ||
-                  (d.mode === 'AI' && !d.imageIds.length) ||
-                  busy ||
-                  aiBusy
-                }
-                onClick={() =>
-                  action(() =>
-                    save({
-                      ...data,
-                      drafts: data.drafts.map((row) =>
-                        row.id === d.id ? { ...row, confirmed: true } : row,
-                      ),
-                    }),
-                  )
-                }
-              >
-                원본 대조 후 개별 승인
-              </button>
-              <button
-                className="button secondary"
-                disabled={!d.confirmed || !d.title.trim() || !d.keyword.trim() || busy || aiBusy}
-                onClick={async () => {
-                  setBusy(true)
-                  try {
-                    const idea = await linkCaptureIdea(localStorage, d.id)
-                    setData(store.read())
-                    await refresh(true)
-                    setMessage(`업무 글감 연결 완료: ${idea.title}`)
-                    setError('')
-                  } catch (e) {
-                    setError(e instanceof Error ? e.message : '글감 연결 실패')
-                  } finally {
-                    setBusy(false)
-                  }
-                }}
-              >
-                업무 글감 저장·연결
-              </button>
-              {d.ideaId && ideas.some((i) => i.id === d.ideaId) && (
+              {d.ideaId && (
                 <Link
-                  className="button primary"
                   to={`/keywords?idea=${encodeURIComponent(d.ideaId)}&keyword=${encodeURIComponent(d.keyword)}`}
                 >
-                  키워드 분석
+                  분석 이동
                 </Link>
               )}
             </div>
+            <details>
+              <summary className="capture-row-summary">
+                <h3>{d.title || '제목 미입력'}</h3>
+                <span>{d.keyword || '키워드 미확인'}</span>
+                <span>{d.source || '출처 미확인'}</span>
+                <span>{d.mode === 'AI' ? 'AI 추출 완료' : '수동 입력'}</span>
+                <span>{groups.some((g) => g.includes(d.id)) ? '중복 후보' : '중복 없음'}</span>
+                <strong>{d.excluded ? '제외' : d.confirmed ? '승인' : '검토 대기'}</strong>
+              </summary>
+              <div className="capture-row-detail">
+                {d.imageIds.map((id) => {
+                  const image = data.images.find((i) => i.id === id)
+                  return image ? <CapturePreview key={id} image={image} /> : null
+                })}
+                <p>
+                  {d.mode === 'MANUAL' ? 'MANUAL · 사용자 입력' : 'AI 추출 · 사용자 검토 필요'} ·{' '}
+                  {d.confirmed ? '사용자 대조 완료' : '확인 필요'}
+                  {groups.some((g) => g.includes(d.id)) ? ' · 동일 제목 중복 후보' : ''}
+                </p>
+                <p>
+                  키워드: {d.keyword || '미입력'} · 출처: {d.source || '미확인'} · 게시 날짜:{' '}
+                  {d.publishedDate || '미확인'}
+                </p>
+                <p>
+                  원본:{' '}
+                  {d.imageIds.map((id) => data.images.find((i) => i.id === id)?.name).join(', ') ||
+                    '연결 없음'}
+                </p>
+                {d.ai && (
+                  <p>
+                    판독: {d.ai.provider} / {d.ai.model} · {d.ai.at} ·{' '}
+                    {d.ai.edited ? '사용자 수정됨' : '원본 AI 결과'}
+                    <br />
+                    원본 인용: {d.ai.evidence}
+                    <br />
+                    출처 근거: {d.ai.sourceEvidence || '미확인'} · 날짜 근거:{' '}
+                    {d.ai.dateEvidence || '미확인'}
+                  </p>
+                )}
+                {d.imageIds.map((id) => (
+                  <a className="text-link" key={id} href={`#image-${id}`}>
+                    원본 미리보기 ·{' '}
+                  </a>
+                ))}
+                {d.ai && d.ai.keywords.length > 1 && (
+                  <label>
+                    분석할 핵심 키워드 선택
+                    <select
+                      value={d.keyword}
+                      onChange={(e) =>
+                        action(() =>
+                          save({
+                            ...data,
+                            drafts: data.drafts.map((row) =>
+                              row.id === d.id
+                                ? {
+                                    ...row,
+                                    keyword: e.target.value,
+                                    confirmed: false,
+                                    ai: { ...d.ai!, edited: true },
+                                  }
+                                : row,
+                            ),
+                          }),
+                        )
+                      }
+                    >
+                      <option value={d.keyword}>{d.keyword}</option>
+                      {d.ai.keywords
+                        .filter((k) => k !== d.keyword)
+                        .map((k) => (
+                          <option key={k}>{k}</option>
+                        ))}
+                    </select>
+                  </label>
+                )}
+                <p>{d.summary}</p>
+                {d.uncertain && <p>추가 확인: {d.uncertain}</p>}
+                <div className="capture-actions">
+                  <button
+                    className="button secondary"
+                    onClick={() =>
+                      action(() =>
+                        save({
+                          ...data,
+                          drafts: data.drafts.map((x) =>
+                            x.id === d.id ? { ...x, excluded: !d.excluded, confirmed: false } : x,
+                          ),
+                        }),
+                      )
+                    }
+                  >
+                    {d.excluded ? '제외 취소·다시 검토' : '글감 제외'}
+                  </button>
+                  <button
+                    className="button secondary"
+                    onClick={() => setEditing(structuredClone(d))}
+                  >
+                    추출 결과 수정
+                  </button>
+                  <button
+                    className="button secondary"
+                    disabled={busy || aiBusy}
+                    onClick={() => setDeletingDraft(d.id)}
+                  >
+                    추출 글감 삭제
+                  </button>
+                  {deletingDraft === d.id && (
+                    <div>
+                      <p>
+                        이 추출 글감만 삭제합니다. 원본 이미지와 이미 연결한 업무 글감은 유지됩니다.
+                      </p>
+                      <button
+                        className="button secondary"
+                        disabled={busy || aiBusy}
+                        onClick={() =>
+                          action(() => {
+                            save({ ...data, drafts: data.drafts.filter((row) => row.id !== d.id) })
+                            setDeletingDraft(null)
+                            if (editing?.id === d.id) setEditing(null)
+                          })
+                        }
+                      >
+                        추출 글감 삭제 확인
+                      </button>
+                      <button className="button secondary" onClick={() => setDeletingDraft(null)}>
+                        삭제 취소
+                      </button>
+                    </div>
+                  )}
+                  <button
+                    className="button secondary"
+                    disabled={
+                      d.excluded ||
+                      d.confirmed ||
+                      !d.title.trim() ||
+                      !d.keyword.trim() ||
+                      (d.mode === 'AI' && !d.imageIds.length) ||
+                      busy ||
+                      aiBusy
+                    }
+                    onClick={() =>
+                      action(() =>
+                        save({
+                          ...data,
+                          drafts: data.drafts.map((row) =>
+                            row.id === d.id ? { ...row, confirmed: true, excluded: false } : row,
+                          ),
+                        }),
+                      )
+                    }
+                  >
+                    원본 대조 후 개별 승인
+                  </button>
+                  <button
+                    className="button secondary"
+                    disabled={
+                      d.excluded ||
+                      !d.confirmed ||
+                      !d.title.trim() ||
+                      !d.keyword.trim() ||
+                      busy ||
+                      aiBusy
+                    }
+                    onClick={async () => {
+                      setBusy(true)
+                      try {
+                        const idea = await linkCaptureIdea(localStorage, d.id)
+                        setData(store.read())
+                        await refresh(true)
+                        setMessage(`업무 글감 연결 완료: ${idea.title}`)
+                        setError('')
+                      } catch (e) {
+                        setError(e instanceof Error ? e.message : '글감 연결 실패')
+                      } finally {
+                        setBusy(false)
+                      }
+                    }}
+                  >
+                    업무 글감 저장·연결
+                  </button>
+                  {d.ideaId && ideas.some((i) => i.id === d.ideaId) && (
+                    <Link
+                      className="button primary"
+                      to={`/keywords?idea=${encodeURIComponent(d.ideaId)}&keyword=${encodeURIComponent(d.keyword)}`}
+                    >
+                      키워드 분석
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </details>
           </article>
         ))}
         <p>

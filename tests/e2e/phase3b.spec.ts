@@ -51,6 +51,7 @@ test('twenty local images, duplicate detection, reorder, deletion and manual ide
     })
     .check()
   await page.getByRole('button', { name: '추출 글감 저장', exact: true }).click()
+  await page.locator('.capture-list-row summary').click()
   await page.getByRole('button', { name: '업무 글감 저장·연결' }).click()
   await expect(page.getByRole('status')).toContainText('업무 글감 연결 완료')
   await page.getByRole('link', { name: '키워드 분석', exact: true }).last().click()
@@ -211,39 +212,37 @@ test('only three supported recommendations, comparison and snapshot survive relo
   const publishing = {
     ...emptyPublishing(),
     historyChecked: { nkr09134: true, nkr09135: true, nkr09136: true },
-    analyses: items
-      .slice(0, 3)
-      .map((item) => ({
-        ...blankCompetition(item),
-        searchUrl: naverSearch(item.candidate.keyword),
-        checkedDate: date,
-        blog: 'yes' as const,
-        dominant: 'no' as const,
-        position: 'middle' as const,
-        serp: 'information' as const,
-        missingInfo: '최신 공식 신청 절차',
-        reviewmanUrl: 'https://reviewman.kr/guide',
-        posts: [
-          {
-            title: '신청 안내',
-            url: 'https://example.com/post',
-            date,
-            summary: '기존 안내',
-            features: '신규 절차 누락',
-          },
-        ],
-        quality: {
-          fresh: 'no' as const,
-          intentMatch: 'yes' as const,
-          specific: 'no' as const,
-          official: 'no' as const,
-          solves: 'no' as const,
-          intentGap: 'yes' as const,
-          officialEdge: 'yes' as const,
-          longtail: 'yes' as const,
-          better: 'yes' as const,
+    analyses: items.slice(0, 3).map((item) => ({
+      ...blankCompetition(item),
+      searchUrl: naverSearch(item.candidate.keyword),
+      checkedDate: date,
+      blog: 'yes' as const,
+      dominant: 'no' as const,
+      position: 'middle' as const,
+      serp: 'information' as const,
+      missingInfo: '최신 공식 신청 절차',
+      reviewmanUrl: 'https://reviewman.kr/guide',
+      posts: [
+        {
+          title: '신청 안내',
+          url: 'https://example.com/post',
+          date,
+          summary: '기존 안내',
+          features: '신규 절차 누락',
         },
-      })),
+      ],
+      quality: {
+        fresh: 'no' as const,
+        intentMatch: 'yes' as const,
+        specific: 'no' as const,
+        official: 'no' as const,
+        solves: 'no' as const,
+        intentGap: 'yes' as const,
+        officialEdge: 'yes' as const,
+        longtail: 'yes' as const,
+        better: 'yes' as const,
+      },
+    })),
   }
   await page.goto('/recommendations')
   await page.evaluate(
@@ -301,15 +300,13 @@ test('JPEG drag and drop works and oversized batches are rejected', async ({ pag
   })
   await page.locator('.capture-drop').dispatchEvent('drop', { dataTransfer })
   await expect(page.getByRole('img', { name: 'dropped.jpg' })).toBeVisible()
-  await page
-    .getByLabel('캡처 이미지 선택')
-    .setInputFiles(
-      Array.from({ length: 21 }, (_, i) => ({
-        name: `too-many-${i}.png`,
-        mimeType: 'image/png',
-        buffer: Buffer.from('invalid'),
-      })),
-    )
+  await page.getByLabel('캡처 이미지 선택').setInputFiles(
+    Array.from({ length: 21 }, (_, i) => ({
+      name: `too-many-${i}.png`,
+      mimeType: 'image/png',
+      buffer: Buffer.from('invalid'),
+    })),
+  )
   await expect(page.getByRole('alert')).toContainText('최대 20장')
   await expect(page.locator('.capture-card')).toHaveCount(1)
 })

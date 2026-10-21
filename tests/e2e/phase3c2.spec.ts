@@ -71,6 +71,7 @@ test('mock AI separates ideas, requires review, links keyword and restores prove
   await expect(page.getByRole('status', { name: 'AI 처리 상태' })).toContainText('요청 처리 종료')
   expect(aiCalls).toBe(1)
   const draft = page.getByRole('article', { name: '상품권 신청 안내 추출 글감', exact: true })
+  await draft.locator('summary').click()
   await expect(draft.getByRole('button', { name: '업무 글감 저장·연결' })).toBeDisabled()
   await expect(draft).toContainText('출처: 미확인')
   await expect(draft).toContainText('원본 인용: 상품권 신청 안내')
@@ -101,7 +102,7 @@ test('mock AI separates ideas, requires review, links keyword and restores prove
     await target.getByRole('button', { name: '확인하고 전체 복원' }).click()
     await expect(target.getByRole('status')).toContainText('무결성')
     await target.goto('http://127.0.0.1:4178/captures')
-    await expect(target.getByRole('img', { name: 'evidence.png' })).toBeVisible()
+    await expect(target.getByRole('img', { name: 'evidence.png' }).first()).toBeVisible()
     await expect(
       target.getByRole('article', { name: '검토한 상품권 안내 추출 글감' }),
     ).toContainText(AI_MODEL)
@@ -149,6 +150,7 @@ test('mock failure preserves image and requires explicit per-image retry, never 
   await page.getByRole('button', { name: '실패 이미지 다시 판독: retry.png' }).click()
   await expect(page.getByRole('article', { name: '상품권 신청 안내 추출 글감' })).toBeVisible()
   expect(calls).toBe(2)
+  await page.locator('.capture-list-row summary').click()
   await page.getByRole('button', { name: '원본 대조 후 개별 승인' }).click()
   await expect(page.getByRole('button', { name: '업무 글감 저장·연결' })).toBeEnabled()
 })
@@ -205,6 +207,7 @@ test('mock multi-image batch is sequential, groups duplicates and deletes only r
   await expect(page.getByText(/동일 제목 중복 그룹 1개/)).toBeVisible()
   expect(calls).toBe(2)
   await expect(page.getByRole('status', { name: 'AI 처리 상태' })).toContainText('요청 처리 종료')
+  await page.locator('.capture-draft').first().locator('summary').click()
   await page
     .locator('.capture-draft')
     .first()

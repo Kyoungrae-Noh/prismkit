@@ -22,6 +22,7 @@ import { Publishing } from '../pages/publishing'
 import { BackupPage } from '../pages/backup'
 import { CapturesPage } from '../pages/captures'
 import { RecommendationsPage } from '../pages/recommendations'
+import { ManuscriptsPage } from '../pages/manuscripts'
 import { Connections } from '../pages/connections'
 import { IdeaForm } from '../components/idea-form'
 import { EmptyState, Modal } from '../components/ui'
@@ -33,6 +34,7 @@ const navigation = [
   { path: '/keywords', label: '키워드 분석', icon: Search },
   { path: '/publishing', label: '경쟁·발행 판단', icon: FilePenLine },
   { path: '/recommendations', label: '발행 후보 TOP 10', icon: Sparkles },
+  { path: '/manuscripts', label: '원고 작업실', icon: FilePenLine },
   { path: '/backup', label: '백업·복원', icon: FilePenLine },
   { path: '/connections', label: '데이터 연결', icon: Plug },
 ]
@@ -127,7 +129,7 @@ export function App() {
           </div>
           <div className="sidebar-footer">
             <span className="version-dot" />
-            Phase 3A <span>v0.3.0</span>
+            Phase 3D·3E <span>v0.5.0</span>
           </div>
         </div>
       </aside>
@@ -185,6 +187,7 @@ export function App() {
               />
               <Route path="/keywords" element={<Keywords notify={setToast} />} />
               <Route path="/publishing" element={<Publishing />} />
+              <Route path="/manuscripts" element={<ManuscriptsPage />} />
               <Route path="/backup" element={<BackupPage />} />
               <Route path="/captures" element={<CapturesPage />} />
               <Route path="/recommendations" element={<RecommendationsPage />} />

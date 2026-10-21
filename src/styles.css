@@ -3170,3 +3170,125 @@ textarea {
   gap: 8px;
   align-items: center;
 }
+.capture-list-row {
+  padding: 12px 16px;
+}
+.capture-row-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--text-muted, #707070);
+}
+.capture-row-select label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.capture-row-summary {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) repeat(2, minmax(100px, 1fr)) repeat(3, auto);
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  padding: 12px 0;
+  font-size: 12px;
+}
+.capture-row-summary h3 {
+  font-size: 15px;
+  margin: 0;
+}
+.capture-row-summary > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.capture-row-detail {
+  border-top: 1px solid #eee;
+  padding-top: 16px;
+}
+.capture-row-detail .capture-preview {
+  max-height: 360px;
+  max-width: 100%;
+  object-fit: contain;
+}
+.manuscripts-page .idea-form {
+  max-width: none;
+}
+.manuscripts-page textarea {
+  width: 100%;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.manuscripts-page fieldset {
+  min-width: 0;
+  border: 1px solid #e6e3df;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 12px 0;
+}
+.manuscripts-page pre,
+.manuscripts-page p,
+.manuscripts-page li {
+  overflow-wrap: anywhere;
+}
+.draft-history {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.draft-history .button {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.manuscripts-page textarea[rows='1'] {
+  min-height: 44px;
+  height: 44px;
+}
+.draft-preview {
+  white-space: pre-wrap;
+  max-height: 450px;
+  overflow: auto;
+  font: 13px/1.8 inherit;
+}
+.draft-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+.manuscript-preview {
+  border: 1px solid #e6e3df;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 16px 0;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.manuscript-preview p {
+  white-space: pre-wrap;
+}
+.manuscript-preview.naver h2 {
+  font-size: clamp(22px, 3vw, 40px);
+  font-weight: 700;
+}
+.manuscript-preview.naver p {
+  font-size: clamp(16px, 2vw, 25.3px);
+}
+@media (max-width: 900px) {
+  .capture-row-summary {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+  .capture-row-summary h3 {
+    grid-column: 1/-1;
+  }
+  .manuscript-preview {
+    padding: 14px;
+  }
+  .manuscripts-page fieldset {
+    padding: 10px;
+  }
+}
