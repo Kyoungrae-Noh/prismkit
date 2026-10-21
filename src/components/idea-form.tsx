@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useState, type FormEvent } from 'react'
 import { LoaderCircle, Plus, Save } from 'lucide-react'
 import { categories, statuses, statusLabels, type Idea, type IdeaInput } from '../domain/models'
@@ -114,6 +115,14 @@ export function IdeaForm({
           <p className="error-message" role="alert">
             {error}
           </p>
+        )}
+        {idea && (
+          <Link
+            className="button secondary"
+            to={`/keywords?${new URLSearchParams({ keyword: input.keyword, idea: idea.id })}`}
+          >
+            키워드 분석
+          </Link>
         )}
         <div className="modal-actions">
           <button type="button" className="button secondary" onClick={onClose} disabled={saving}>

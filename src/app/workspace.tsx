@@ -8,7 +8,7 @@ interface Workspace {
   connections: Connection[]
   loading: boolean
   error: string | null
-  refresh(): Promise<void>
+  refresh(silent?: boolean): Promise<void>
   saveIdea(input: IdeaInput, id?: string): Promise<void>
   removeIdea(id: string): Promise<void>
 }
@@ -25,24 +25,27 @@ export function WorkspaceProvider({
   const [connections, setConnections] = useState<Connection[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const refresh = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [nextIdeas, nextKeywords, nextConnections] = await Promise.all([
-        repository.listIdeas(),
-        repository.listKeywords(),
-        repository.listConnections(),
-      ])
-      setIdeas(nextIdeas)
-      setKeywords(nextKeywords)
-      setConnections(nextConnections)
-    } catch (error) {
-      setError(error instanceof Error ? error.message : '데이터를 불러오지 못했습니다.')
-    } finally {
-      setLoading(false)
-    }
-  }, [repository])
+  const refresh = useCallback(
+    async (silent = false) => {
+      if (!silent) setLoading(true)
+      setError(null)
+      try {
+        const [nextIdeas, nextKeywords, nextConnections] = await Promise.all([
+          repository.listIdeas(),
+          repository.listKeywords(),
+          repository.listConnections(),
+        ])
+        setIdeas(nextIdeas)
+        setKeywords(nextKeywords)
+        setConnections(nextConnections)
+      } catch (error) {
+        setError(error instanceof Error ? error.message : '데이터를 불러오지 못했습니다.')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [repository],
+  )
   useEffect(() => {
     void refresh()
   }, [refresh])

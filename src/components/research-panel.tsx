@@ -88,7 +88,8 @@ function ResearchResult({ record, onEdit }: { record: KeywordResearch; onEdit():
       </p>
       <p>데이터 출처: {record.source}</p>
       <p>
-        마지막 확인 날짜: <time dateTime={record.checkedDate}>{record.checkedDate}</time>
+        문서 수 검색 범위: {record.documentScope || '확인 불가'} · 마지막 확인 날짜:{' '}
+        <time dateTime={record.checkedDate}>{record.checkedDate}</time>
       </p>
       <p>
         자료 저장 시각:{' '}
@@ -132,6 +133,7 @@ function ResearchForm({
           pc: parseCount(field('pc')),
           mobile: parseCount(field('mobile')),
           blogTotal: parseCount(field('blogTotal'), false) as number | null,
+          documentScope: field('documentScope'),
           source: field('source'),
           checkedDate: field('checkedDate'),
         },
@@ -211,6 +213,19 @@ function ResearchForm({
             placeholder="확인 불가면 비워두세요"
           />
         </label>
+        <label>
+          문서 수 검색 범위
+          <input
+            name="documentScope"
+            maxLength={500}
+            defaultValue={record?.documentScope ?? ''}
+            placeholder="예: 네이버 블로그 탭, 정확한 검색어, 전체 기간"
+          />
+        </label>
+        <p className="form-note">
+          문서 수는 직접 확인한 값만 입력하세요. 출처·확인 날짜·검색 범위가 없으면 문서 수 필터에서
+          확인 불가로 처리합니다. 검색광고 경쟁도와 별개입니다.
+        </p>
         <label>
           데이터 출처
           <input

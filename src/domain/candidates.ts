@@ -1,3 +1,4 @@
+import { validDocuments, type DocumentEvidence } from './documents'
 import type { Count } from './research'
 export const intents = [
   '정보 확인형',
@@ -25,6 +26,7 @@ export interface CandidateInput {
   collectedAt: string | null
   source: string
   mode: DataMode
+  documents?: DocumentEvidence
 }
 export interface IntentResult {
   intent: Intent
@@ -180,6 +182,7 @@ export interface CandidateFilters {
   exclude: string
   status: string
   keepUnknown: boolean
+  documentsMax?: string
 }
 export const emptyFilters: CandidateFilters = {
   min: '',
@@ -193,12 +196,14 @@ export const emptyFilters: CandidateFilters = {
   exclude: '',
   status: 'all',
   keepUnknown: true,
+  documentsMax: '',
 }
 export function validateFilters(filters: CandidateFilters) {
   for (const [min, max] of [
     [filters.min, filters.max],
     [filters.pcMin, filters.pcMax],
     [filters.mobileMin, filters.mobileMax],
+    ['', filters.documentsMax ?? ''],
   ]) {
     for (const value of [min, max])
       if (value !== '' && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value))))
@@ -235,6 +240,10 @@ export function applyCandidateFilters(rows: Candidate[], filters: CandidateFilte
         range(row.total, filters.min, filters.max) &&
         range(row.pc, filters.pcMin, filters.pcMax) &&
         range(row.mobile, filters.mobileMin, filters.mobileMax) &&
+        (!filters.documentsMax ||
+          (row.mode !== 'DEMO' &&
+            validDocuments(row.documents) &&
+            row.documents!.count! <= Number(filters.documentsMax))) &&
         (filters.intent === 'all' || row.intent === filters.intent) &&
         (!include || normalizeKeyword(row.keyword).includes(include)) &&
         (filters.status === 'all' || row.status === filters.status),
@@ -268,4 +277,32 @@ export function summarizeCandidates(rows: Candidate[]) {
     review: rows.filter((row) => row.status === '추가 검증 필요').length,
     excluded: rows.filter((row) => row.status === '제외 후보').length,
   }
+}
+
+export const filterPresets = {
+  beginner: {
+    label: '신규 블로그 실험',
+    description: '월 500회 이상 · 문서 300개 이하',
+    min: '500',
+    max: '',
+    documentsMax: '300',
+  },
+  demand: {
+    label: '검색 수요 우선',
+    description: '월 3,000회 이상 · 문서 수 제한 없음',
+    min: '3000',
+    max: '',
+    documentsMax: '',
+  },
+  longtail: {
+    label: '롱테일 발굴',
+    description: '월 0~2,999회 · 문서 1,000개 이하',
+    min: '0',
+    max: '2999',
+    documentsMax: '1000',
+  },
+} as const
+export function presetFilters(name: keyof typeof filterPresets): CandidateFilters {
+  const { min, max, documentsMax } = filterPresets[name]
+  return { ...emptyFilters, min, max, documentsMax, keepUnknown: false }
 }

@@ -1,3 +1,4 @@
+import { workspaceStorage } from './storage'
 import { createResearchStore } from './research-store'
 import {
   categories,
@@ -39,6 +40,7 @@ function isIdea(value: unknown): value is Idea {
 
 /** A local demo adapter. Existing data is never overwritten after a failed read or write. */
 export function createLocalRepository(storage: StoragePort): WorkspaceRepository {
+  storage = workspaceStorage(storage)
   function read(): Idea[] {
     let raw: string | null
     try {

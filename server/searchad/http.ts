@@ -1,7 +1,9 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { ApiError } from './service.ts'
 import type { SearchAdResponse } from '../../src/providers/searchad-types.ts'
-export function createHandler(query: (keyword: unknown) => Promise<SearchAdResponse>) {
+export function createHandler(
+  query: ((keyword: unknown) => Promise<SearchAdResponse>) & { usage?: () => unknown },
+) {
   return async (req: IncomingMessage, res: ServerResponse) => {
     res.setHeader('Content-Type', 'application/json; charset=utf-8')
     res.setHeader('Cache-Control', 'no-store')
@@ -18,10 +20,12 @@ export function createHandler(query: (keyword: unknown) => Promise<SearchAdRespo
       return fail(403, 'FORBIDDEN', '로컬 Prismkit 요청만 허용합니다.')
     if (req.method !== 'GET') return fail(405, 'METHOD', 'GET 요청만 허용합니다.')
     const url = new URL(req.url ?? '/', 'http://127.0.0.1:4179')
-    if (url.pathname !== '/api/searchad/keyword')
+    if (!['/api/searchad/keyword', '/api/searchad/usage'].includes(url.pathname))
       return fail(404, 'NOT_FOUND', '지원하지 않는 경로입니다.')
     try {
-      const data = await query(url.searchParams.get('keyword'))
+      const data = url.pathname.endsWith('/usage')
+        ? query.usage?.()
+        : await query(url.searchParams.get('keyword'))
       res.writeHead(200)
       res.end(JSON.stringify(data))
     } catch (error) {

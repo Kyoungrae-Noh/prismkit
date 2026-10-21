@@ -248,3 +248,21 @@ test('HTTP boundary returns normalized JSON only for explicit local requests', a
   assert.equal(status, 200)
   assert.equal(JSON.parse(body).volume.data.total, 30)
 })
+
+test('local daily usage resets at KST midnight without clearing upstream block', async () => {
+  let time = Date.parse('2026-10-21T14:59:30Z')
+  const query = createService(auth, { now: () => time, fetcher: async () => ok() })
+  await query('온누리상품권')
+  assert.equal(query.usage().used, 1)
+  time += 60000
+  assert.equal(query.usage().used, 0)
+  assert.equal(query.usage().remaining, 30)
+  const blocked = createService(auth, {
+    now: () => time,
+    fetcher: async () => new Response('', { status: 429 }),
+  })
+  await assert.rejects(blocked('차단'))
+  time += 86400000
+  assert.equal(blocked.usage().blocked, true)
+  await assert.rejects(blocked('차단'))
+})

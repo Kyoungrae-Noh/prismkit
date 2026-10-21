@@ -7,6 +7,7 @@ export interface SearchAdRow {
   total: Count
 }
 export interface SearchAdResponse {
+  usage?: import('../../server/searchad/budget').Usage
   volume: ProviderResult<VolumeData>
   expansion: ProviderResult<ExpansionData>
   rows: SearchAdRow[]

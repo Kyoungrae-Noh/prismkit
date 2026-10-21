@@ -1,8 +1,12 @@
+import { readEnvelope } from '../data/storage'
+import { validDocuments } from '../domain/documents'
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useWorkspace } from '../app/workspace'
 import {
   analyzeCandidates,
+  filterPresets,
+  presetFilters,
   applyCandidateFilters,
   candidateStatuses,
   emptyFilters,
@@ -22,53 +26,89 @@ export interface LiveCandidateBatch {
   keyword: string
   data: SearchAdResponse
 }
-export function CandidatePanel({ live }: { live: LiveCandidateBatch | null }) {
+const drafts = new Map<
+  string,
+  {
+    mode: DataMode
+    topic: string
+    reviewman: string
+    filters: CandidateFilters
+    sort: CandidateSort
+    ideaId: string
+  }
+>()
+export function CandidatePanel({
+  live,
+  initialIdeaId = '',
+}: {
+  live: LiveCandidateBatch | null
+  initialIdeaId?: string
+}) {
   const { keywords, ideas, researchRepository } = useWorkspace()
-  const [mode, setMode] = useState<DataMode>('DEMO'),
-    [topic, setTopic] = useState(''),
-    [reviewman, setReviewman] = useState('')
-  const [filters, setFilters] = useState<CandidateFilters>({ ...emptyFilters }),
-    [sort, setSort] = useState<CandidateSort>('priority')
+  const draftKey = `${readEnvelope(localStorage)?.restoredAt ?? 'original'}:${initialIdeaId}`
+  const draft = drafts.get(draftKey)
+  const [mode, setMode] = useState<DataMode>(draft?.mode ?? 'LIVE'),
+    [topic, setTopic] = useState(draft?.topic ?? ''),
+    [reviewman, setReviewman] = useState(draft?.reviewman ?? '')
+  const [filters, setFilters] = useState<CandidateFilters>(draft?.filters ?? { ...emptyFilters }),
+    [sort, setSort] = useState<CandidateSort>(draft?.sort ?? 'priority')
   const [manual, setManual] = useState<CandidateInput[]>([]),
     [loadError, setLoadError] = useState(''),
     [revision, setRevision] = useState(0)
   const [selected, setSelected] = useState<Set<string>>(new Set()),
-    [ideaId, setIdeaId] = useState(''),
+    [ideaId, setIdeaId] = useState(draft?.ideaId ?? initialIdeaId),
     [saved, setSaved] = useState<SavedCandidate[]>([]),
     [storeError, setStoreError] = useState(''),
     [notice, setNotice] = useState(''),
     [page, setPage] = useState(0)
+  useEffect(() => {
+    drafts.set(draftKey, { mode, topic, reviewman, filters, sort, ideaId })
+  }, [draftKey, mode, topic, reviewman, filters, sort, ideaId])
   const store = useMemo(() => createCandidateStore(window.localStorage), [])
   useEffect(() => {
     if (mode === 'LIVE' && live) setTopic(live.keyword)
   }, [live, mode])
   useEffect(() => {
     let active = true
-    if (mode === 'MANUAL')
-      void researchRepository
-        .listResearch()
-        .then((rows) => {
-          if (active) {
-            setManual(
-              rows.map((row) => ({
-                keyword: row.keyword,
-                pc: row.pc,
-                mobile: row.mobile,
-                total: totalVolume(row.pc, row.mobile),
-                collectedAt: row.checkedDate,
+    void researchRepository
+      .listResearch()
+      .then((rows) => {
+        if (active) {
+          setManual(
+            rows.map((row) => ({
+              keyword: row.keyword,
+              pc: row.pc,
+              mobile: row.mobile,
+              total: totalVolume(row.pc, row.mobile),
+              collectedAt: row.checkedDate,
+              source: row.source,
+              mode: 'MANUAL',
+              ...(validDocuments({
+                count: row.blogTotal,
                 source: row.source,
-                mode: 'MANUAL',
-              })),
-            )
-            setLoadError('')
-          }
-        })
-        .catch((error) => {
-          if (active) {
-            setManual([])
-            setLoadError(error.message)
-          }
-        })
+                checkedDate: row.checkedDate,
+                scope: row.documentScope ?? '',
+              })
+                ? {
+                    documents: {
+                      count: row.blogTotal,
+                      source: row.source,
+                      checkedDate: row.checkedDate,
+                      scope: row.documentScope!,
+                    },
+                  }
+                : {}),
+            })),
+          )
+          setLoadError('')
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          setManual([])
+          setLoadError(error.message)
+        }
+      })
     return () => {
       active = false
     }
@@ -96,6 +136,12 @@ export function CandidatePanel({ live }: { live: LiveCandidateBatch | null }) {
       mode === 'LIVE'
         ? (live?.data.rows.map((row) => ({
             ...row,
+            ...(() => {
+              const matches = manual.filter(
+                (m) => normalizeKeyword(m.keyword) === normalizeKeyword(row.keyword) && m.documents,
+              )
+              return matches.length === 1 ? { documents: matches[0].documents } : {}
+            })(),
             collectedAt: live.data.volume.collectedAt,
             source: live.data.volume.source.label,
             mode: 'LIVE',
@@ -140,6 +186,8 @@ export function CandidatePanel({ live }: { live: LiveCandidateBatch | null }) {
   }
   function saveSelected() {
     try {
+      if (ideaId && !ideas.some((idea) => idea.id === ideaId))
+        throw new Error('연결 글감이 없어졌습니다. 연결을 다시 선택하세요.')
       const rows = result.rows.filter((row) => selected.has(row.key))
       if (!rows.length) return
       const status = store.save(rows, context, ideaId || null)
@@ -241,11 +289,83 @@ export function CandidatePanel({ live }: { live: LiveCandidateBatch | null }) {
             가중치는 사용하지 않습니다.
           </p>
           <label>
+            실험용 프리셋
+            <select
+              aria-label="실험용 프리셋"
+              value={
+                Object.entries(filterPresets).find(
+                  ([, p]) =>
+                    p.min === filters.min &&
+                    p.max === filters.max &&
+                    p.documentsMax === filters.documentsMax &&
+                    !filters.keepUnknown,
+                )?.[0] ?? 'custom'
+              }
+              onChange={(e) => {
+                if (e.target.value !== 'custom')
+                  setFilters(presetFilters(e.target.value as keyof typeof filterPresets))
+              }}
+            >
+              <option value="custom">사용자 지정</option>
+              {Object.entries(filterPresets).map(([key, preset]) => (
+                <option key={key} value={key}>
+                  {preset.label} · {preset.description}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="form-note">
+            실험 기준이며 검증된 상위 노출 공식이 아닙니다. 월 검색량은 출처의 최근 30일/월간
+            값입니다. 작은 문서 수만으로 발행을 추천하지 않습니다. 검색광고 경쟁도는 블로그 검색
+            경쟁도와 다릅니다.
+          </p>
+          <label>
+            경쟁 문서 수 빠른 설정
+            <select
+              aria-label="경쟁 문서 수 빠른 설정"
+              value={
+                ['300', '500', '1000', '5000'].includes(filters.documentsMax ?? '')
+                  ? filters.documentsMax
+                  : 'custom'
+              }
+              onChange={(e) => {
+                if (e.target.value !== 'custom')
+                  field('documentsMax', e.target.value === 'all' ? '' : e.target.value)
+              }}
+            >
+              <option value="custom">사용자 지정</option>
+              <option value="all">제한 없음</option>
+              {['300', '500', '1000', '5000'].map((v) => (
+                <option key={v} value={v}>
+                  {Number(v).toLocaleString()}개 이하
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            경쟁 문서 수 최대
+            <input
+              inputMode="numeric"
+              value={filters.documentsMax ?? ''}
+              onChange={(e) => field('documentsMax', e.target.value)}
+              placeholder="제한 없음"
+            />
+          </label>
+          <p>
+            문서 수 조건은 출처·날짜·검색 범위가 있는 수동 자료만 통과합니다. 아래 나의 키워드
+            자료에 같은 키워드로 등록하고 다시 읽으세요. 여러 기록이 중복되면 LIVE 문서 수는 확인
+            불가로 처리합니다.
+          </p>
+          <button className="button secondary" onClick={() => setRevision((v) => v + 1)}>
+            문서 수 자료 다시 읽기
+          </button>
+          {loadError && <p role="alert">{loadError}</p>}
+          <label>
             검색량 빠른 설정
             <select
               aria-label="검색량 빠른 설정"
               value={
-                ['100', '500', '1000', '5000'].includes(filters.min) && filters.max === ''
+                ['500', '1000', '3000', '5000'].includes(filters.min) && filters.max === ''
                   ? filters.min
                   : 'custom'
               }
@@ -253,12 +373,17 @@ export function CandidatePanel({ live }: { live: LiveCandidateBatch | null }) {
                 if (event.target.value === 'all')
                   setFilters((current) => ({ ...current, min: '', max: '' }))
                 else if (event.target.value !== 'custom')
-                  setFilters((current) => ({ ...current, min: event.target.value, max: '' }))
+                  setFilters((current) => ({
+                    ...current,
+                    min: event.target.value,
+                    max: '',
+                    keepUnknown: false,
+                  }))
               }}
             >
               <option value="custom">사용자 지정 / 현재 범위</option>
               <option value="all">전체 검색량 제한 없음</option>
-              {['100', '500', '1000', '5000'].map((value) => (
+              {['500', '1000', '3000', '5000'].map((value) => (
                 <option value={value} key={value}>
                   {Number(value).toLocaleString()} 이상
                 </option>
@@ -416,6 +541,7 @@ export function CandidatePanel({ live }: { live: LiveCandidateBatch | null }) {
             <tr>
               <th>선택</th>
               <th>키워드·출처</th>
+              <th>문서 수 / 수동 근거</th>
               <th>PC</th>
               <th>모바일</th>
               <th>전체</th>
@@ -455,6 +581,22 @@ export function CandidatePanel({ live }: { live: LiveCandidateBatch | null }) {
                       {row.collectedAt ?? '확인 시각 없음'}
                     </small>
                     {duplicate && <span className="subtle-badge">중복 후보 주의</span>}
+                  </td>
+                  <td>
+                    {validDocuments(row.documents) ? (
+                      <>
+                        <strong>{displayCount(row.documents!.count)}</strong>
+                        <small className="candidate-meta">
+                          MANUAL · {row.documents!.source}
+                          <br />
+                          {row.documents!.checkedDate}
+                          <br />
+                          {row.documents!.scope}
+                        </small>
+                      </>
+                    ) : (
+                      '확인 불가'
+                    )}
                   </td>
                   <td>{displayCount(row.pc)}</td>
                   <td>{displayCount(row.mobile)}</td>

@@ -20,6 +20,9 @@ const response = {
 test('LIVE requires a button request; displays counts, bounds, sorting and safe failures (mock)', async ({
   page,
 }, testInfo) => {
+  await page.route('**/api/searchad/usage', (route) =>
+    route.fulfill({ status: 503, json: { error: { message: '모의 예산 확인 불가' } } }),
+  )
   let requests = 0
   await page.route('**/api/searchad/keyword?*', async (route) => {
     requests++

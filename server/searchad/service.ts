@@ -1,3 +1,4 @@
+import { budgetUsage, kstDay, DAILY_LIMIT } from './budget.ts'
 import { createHmac } from 'node:crypto'
 import type { SearchAdResponse, SearchAdRow } from '../../src/providers/searchad-types.ts'
 import type { Count } from '../../src/domain/research.ts'
@@ -112,10 +113,23 @@ export function createService(
   let calls = 0,
     last = -Infinity,
     busy = false,
-    blocked = false
-  return async (input: unknown): Promise<SearchAdResponse> => {
+    blocked = false,
+    day = kstDay(now())
+  const usage = () => {
+    const current = kstDay(now())
+    if (current > day) {
+      calls = 0
+      day = current
+    }
+    return budgetUsage(
+      { version: 2, day, calls, last: Number.isFinite(last) ? last : 0, blocked, busyUntil: 0 },
+      now(),
+    )
+  }
+  const query = async (input: unknown): Promise<SearchAdResponse> => {
     const keyword = keywordInput(input),
       time = now()
+    usage()
     if (blocked)
       throw new ApiError(
         429,
@@ -123,12 +137,17 @@ export function createService(
         '인증 실패 또는 429로 외부 호출을 중단했습니다. 설정 확인 후 서버를 재시작하세요.',
       )
     const hit = cache.get(keyword)
-    if (hit && hit.expires > time) return { ...structuredClone(hit.data), cached: true }
-    if (busy || time - last < 10000 || calls >= (options.maxCalls ?? 10))
+    if (hit && hit.expires > time)
+      return { ...structuredClone(hit.data), cached: true, usage: usage() }
+    if (
+      busy ||
+      time - last < 10000 ||
+      calls >= Math.min(options.maxCalls ?? DAILY_LIMIT, DAILY_LIMIT)
+    )
       throw new ApiError(
         429,
         'RATE_LIMIT',
-        '서버 호출 제한입니다. 최소 10초 간격, 서버 실행당 최대 10회만 조회합니다.',
+        '서버 호출 제한입니다. 최소 10초 간격, 한국시간 하루 최대 30회만 조회합니다.',
       )
     const keys = auth()
     busy = true
@@ -181,7 +200,7 @@ export function createService(
       }
       const data = normalize(raw, keyword, new Date(now()).toISOString())
       cache.set(keyword, { expires: now() + 300000, data: structuredClone(data) })
-      return data
+      return { ...data, usage: usage() }
     } catch (error) {
       if (error instanceof ApiError) throw error
       throw new ApiError(
@@ -193,4 +212,5 @@ export function createService(
       busy = false
     }
   }
+  return Object.assign(query, { usage })
 }

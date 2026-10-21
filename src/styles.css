@@ -3055,3 +3055,12 @@ textarea {
   display: grid;
   white-space: normal;
 }
+
+/* Whole-workspace restore controls must remain reachable at 320px. */
+.backup-page, .backup-preview { min-width: 0; }
+.backup-page .research-panel, .backup-preview { display: grid; gap: 16px; }
+.backup-page input[type='file'] { width: 100%; max-width: 100%; min-width: 0; }
+.backup-page p, .backup-page label { overflow-wrap: anywhere; }
+.backup-confirm { display: flex; align-items: flex-start; gap: 8px; }
+.backup-confirm input { flex-shrink: 0; }
+.backup-page .button { justify-self: start; max-width: 100%; white-space: normal; }

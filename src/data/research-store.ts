@@ -1,6 +1,8 @@
+import { workspaceStorage } from './storage'
 import { validateResearch, type KeywordResearch, type ResearchInput } from '../domain/research'
 export const RESEARCH_KEY = 'prismkit.keyword-research.v1'
 export function createResearchStore(storage: Pick<Storage, 'getItem' | 'setItem'>) {
+  storage = workspaceStorage(storage)
   function read(): KeywordResearch[] {
     let raw: string | null
     try {

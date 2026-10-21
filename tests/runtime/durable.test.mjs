@@ -74,3 +74,59 @@ test('workerd RPC and SQLite retain cache and quota across runtime restarts', as
     await runtime.dispose()
   }
 })
+
+test('legacy SQLite payload migrates without clearing quota or block on redeployment', async () => {
+  const persistence = mkdtempSync(resolve('test-results/legacy-durable-'))
+  const legacy = `import {DurableObject} from 'cloudflare:workers';
+    export class SearchAdBudget extends DurableObject {
+      async query(){this.ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS budget (id INTEGER PRIMARY KEY CHECK(id=1), payload TEXT NOT NULL)');
+      this.ctx.storage.sql.exec('INSERT OR REPLACE INTO budget VALUES(1,?)',JSON.stringify({calls:10,last:Date.now()-86400000,blocked:true,busyUntil:0}));return Response.json({seeded:true});}
+    } export default {fetch(){return new Response('',{status:403})}}`
+  const options = (seed) =>
+    convertV4MiniflareOptions({
+      cf: false,
+      telemetry: { enabled: false },
+      resourcePersistencePath: persistence,
+      workers: [
+        {
+          name: 'driver',
+          modules: true,
+          compatibilityDate: '2026-10-19',
+          script: `export default {fetch(request,env){const s=env.SEARCHAD.get(env.SEARCHAD.idFromName('prismkit-searchad-v1'));return ${seed ? 's.query()' : 's.usage()'}}}`,
+          durableObjects: {
+            SEARCHAD: { className: 'SearchAdBudget', scriptName: 'api', useSQLite: true },
+          },
+        },
+        {
+          name: 'api',
+          modules: true,
+          ...(seed ? { script: legacy } : { scriptPath: resolve('test-results/worker/index.js') }),
+          compatibilityDate: '2026-10-19',
+          compatibilityFlags: ['nodejs_compat'],
+          durableObjects: { SEARCHAD: { className: 'SearchAdBudget', useSQLite: true } },
+          outboundService: () => {
+            throw new Error('No upstream calls allowed during migration')
+          },
+        },
+      ],
+    })
+  let runtime = new Miniflare(options(true))
+  try {
+    assert.equal((await runtime.dispatchFetch('https://local.invalid/')).status, 200)
+    await runtime.dispose()
+    runtime = new Miniflare(options(false))
+    const response = await runtime.dispatchFetch('https://local.invalid/')
+    assert.equal(response.status, 200)
+    const usage = await response.json()
+    assert.equal(usage.used, 10)
+    assert.equal(usage.remaining, 0)
+    assert.equal(usage.limit, 10)
+    assert.equal(usage.blocked, true)
+    assert.equal(usage.migration, true)
+    await runtime.dispose()
+    runtime = new Miniflare(options(false))
+    assert.deepEqual(await (await runtime.dispatchFetch('https://local.invalid/')).json(), usage)
+  } finally {
+    await runtime.dispose()
+  }
+})

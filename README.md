@@ -1,5 +1,7 @@
 # Prismkit
 
+> Phase 3A 로컬 개선: LIVE 우선 분석, 글감 연결, 일일 호출 예산, 전체 백업·복원과 실험용 문서 수 필터를 추가했습니다. **아직 운영 배포하지 않았습니다.** 현재 동작·데이터 전환·제약은 [Phase 3A 보고서](docs/PHASE3A_REPORT.md)를 우선 참고하세요. 아래 Phase 0~2 기록은 당시 구현 범위를 설명합니다.
+
 키워드 탐색과 콘텐츠 기획을 위한 개인 워크스페이스. 경쟁 분석·발행 판단 기능과 Cloudflare Access로 보호하는 Pages·서버리스 검색광고 API 운영 구성을 포함합니다.
 
 [운영 구성·검증·복구 절차](docs/DEPLOYMENT.md) · [이전 Phase 2E 조사 기록](docs/PHASE2E_RESUME_REPORT.md)

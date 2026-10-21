@@ -171,3 +171,37 @@ test('authorized SPA routes receive no-store and security headers', async () => 
     assert.match(r.headers.get('content-security-policy') ?? '', /frame-ancestors 'none'/)
   }
 })
+
+test('usage endpoint requires authentication and never invokes keyword query', async () => {
+  let queried = 0,
+    inspected = 0
+  const request = req(undefined, 'https://prismkit.online/api/searchad/usage', {
+    'x-prismkit-request': 'keyword-query',
+  })
+  const query = async () => {
+    queried++
+    throw new Error('No keyword calls')
+  }
+  const usage = async () => {
+    inspected++
+    return { used: 3, remaining: 27 }
+  }
+  assert.equal(
+    (await handleProtected(request, settings, async () => new Response(), query, undefined, usage))
+      .status,
+    401,
+  )
+  assert.equal(inspected, 0)
+  const allowed = await handleProtected(
+    request,
+    settings,
+    async () => new Response(),
+    query,
+    async () => {},
+    usage,
+  )
+  assert.equal(allowed.status, 200)
+  assert.deepEqual(await allowed.json(), { used: 3, remaining: 27 })
+  assert.equal(queried, 0)
+  assert.equal(inspected, 1)
+})

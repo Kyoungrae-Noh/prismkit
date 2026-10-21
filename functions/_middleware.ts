@@ -17,6 +17,15 @@ export const onRequest: PagesFunction<Omit<PagesEnv, 'SEARCHAD'> & Pick<Env, 'SE
         if (!upstream.ok) throw new Error('Upstream rejected')
         return await upstream.json()
       },
+      undefined,
+      async () => {
+        const stub = context.env.SEARCHAD.get(
+          context.env.SEARCHAD.idFromName('prismkit-searchad-v1'),
+        )
+        upstream = await stub.usage()
+        if (!upstream.ok) throw new Error('Budget unavailable')
+        return await upstream.json()
+      },
     )
     return upstream && !upstream.ok ? upstream : response
   } catch {

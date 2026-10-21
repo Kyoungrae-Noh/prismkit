@@ -17,6 +17,7 @@ export async function handleProtected(
   next: () => Promise<Response>,
   query: (keyword: unknown) => Promise<SearchAdResponse>,
   verify = verifyAccess,
+  usage?: () => Promise<unknown>,
 ) {
   const url = new URL(request.url)
   // Pages production/preview hosts are never an alternate entry point, even with a valid JWT.
@@ -30,7 +31,7 @@ export async function handleProtected(
     return failure(401, 'AUTH', '관리자 인증이 필요합니다. 로그인 후 다시 시도하세요.')
   }
   if (url.pathname.startsWith('/api/')) {
-    if (url.pathname !== '/api/searchad/keyword')
+    if (!['/api/searchad/keyword', '/api/searchad/usage'].includes(url.pathname))
       return failure(404, 'NOT_FOUND', '지원하지 않는 API입니다.')
     if (request.method !== 'GET') return failure(405, 'METHOD', 'GET 요청만 허용합니다.')
     if (
@@ -41,9 +42,14 @@ export async function handleProtected(
     )
       return failure(403, 'FORBIDDEN', 'Prismkit 화면의 조회 요청만 허용합니다.')
     try {
-      return Response.json(await query(url.searchParams.get('keyword')), {
-        headers: securityHeaders,
-      })
+      return Response.json(
+        url.pathname.endsWith('/usage')
+          ? await usage?.()
+          : await query(url.searchParams.get('keyword')),
+        {
+          headers: securityHeaders,
+        },
+      )
     } catch {
       return failure(
         503,

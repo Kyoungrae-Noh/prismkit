@@ -6,12 +6,8 @@ import {
   type Credentials,
 } from '../server/searchad/service.ts'
 import type { SearchAdResponse } from '../src/providers/searchad-types.ts'
-export interface Budget {
-  calls: number
-  last: number
-  blocked: boolean
-  busyUntil: number
-}
+import { currentBudget, budgetUsage, type Budget } from '../server/searchad/budget.ts'
+export { emptyBudget, type Budget } from '../server/searchad/budget.ts'
 export interface CacheEntry {
   expires: number
   data: SearchAdResponse
@@ -22,7 +18,6 @@ export interface BudgetStore {
   cached(key: string): CacheEntry | undefined
   cache(key: string, value: CacheEntry): void
 }
-export const emptyBudget = (): Budget => ({ calls: 0, last: 0, blocked: false, busyUntil: 0 })
 export async function boundedJson(response: Response, limit = 1024 * 1024): Promise<unknown> {
   if (!response.body) throw new ApiError(502, 'INVALID_RESPONSE', '검색광고 응답이 비어 있습니다.')
   const reader = response.body.getReader(),
@@ -64,7 +59,8 @@ export async function querySearchAd(
 ): Promise<SearchAdResponse> {
   const keyword = keywordInput(input),
     time = now(),
-    state = store.read()
+    state = currentBudget(store.read(), time)
+  store.write(state)
   if (state.blocked)
     throw new ApiError(
       429,
@@ -72,12 +68,17 @@ export async function querySearchAd(
       '인증 실패 또는 429 이후 운영 조회가 차단되었습니다. 관리자 점검이 필요합니다.',
     )
   const hit = store.cached(keyword)
-  if (hit && hit.expires > time) return { ...hit.data, cached: true }
-  if (state.calls >= 10 || state.busyUntil > time || (state.calls > 0 && time - state.last < 10000))
+  if (hit && hit.expires > time)
+    return { ...hit.data, cached: true, usage: budgetUsage(state, time) }
+  if (
+    state.calls >= budgetUsage(state, time).limit ||
+    state.busyUntil > time ||
+    (state.last > 0 && time - state.last < 10000)
+  )
     throw new ApiError(
       429,
       'RATE_LIMIT',
-      '운영 호출 제한입니다. 최소 10초 간격, 총 10회 예산이 적용됩니다.',
+      '운영 호출 제한입니다. 최소 10초 간격, 한국시간 일일 예산이 적용됩니다.',
     )
   if (!auth.key || !auth.secret || !auth.customer)
     throw new ApiError(503, 'NOT_CONNECTED', '서버 인증 설정이 필요합니다.')
@@ -119,7 +120,7 @@ export async function querySearchAd(
         '정규화된 검색광고 자료가 용량 제한을 초과했습니다.',
       )
     store.cache(keyword, { data, expires: now() + 300000 })
-    return data
+    return { ...data, usage: budgetUsage(store.read(), now()) }
   } catch (error) {
     if (error instanceof ApiError) throw error
     throw new ApiError(502, 'NETWORK', '검색광고 연결에 실패했습니다. 자동 재시도하지 않습니다.')

@@ -8,6 +8,8 @@ test('all routes render without page overflow or runtime errors', async ({ page 
     ['/ideas', '글감 관리'],
     ['/keywords', '키워드 분석'],
     ['/connections', '데이터 연결'],
+    ['/backup', '백업·복원'],
+    ['/publishing', '경쟁 분석'],
   ]) {
     await page.goto(path)
     await expect(page.getByRole('heading', { name: new RegExp(heading), level: 1 })).toBeVisible()
@@ -53,6 +55,7 @@ test('create, reload, edit, cancel with Escape, and use navigation', async ({ pa
   }
   await page.getByRole('link', { name: '키워드 분석', exact: true }).click()
   await expect(page).toHaveURL(/\/keywords$/)
+  await page.getByText('DEMO 예시 살펴보기 · 실제 분석과 무관한 가상 데이터').click()
   await page.getByRole('textbox', { name: '키워드 검색' }).fill('AI')
   await expect(page.getByRole('button', { name: 'AI 생산성 도구 상세 보기' })).toBeVisible()
   await expect(page.getByRole('button', { name: '모닝 루틴 상세 보기' })).toHaveCount(0)

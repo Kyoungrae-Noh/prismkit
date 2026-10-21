@@ -8,6 +8,7 @@ export interface ResearchInput {
   pc: Count
   mobile: Count
   blogTotal: number | null
+  documentScope?: string
   source: string
   checkedDate: string
 }
@@ -101,7 +102,13 @@ export function validateResearch(input: ResearchInput): ResearchInput {
       parseCount(String(input.blogTotal), false) !== input.blogTotal)
   )
     throw new Error('블로그 검색 결과 수를 확인하세요.')
+  if (
+    input.documentScope !== undefined &&
+    (typeof input.documentScope !== 'string' || input.documentScope.length > 500)
+  )
+    throw new Error('문서 수 검색 범위를 확인하세요.')
   return {
+    ...(input.documentScope !== undefined ? { documentScope: input.documentScope.trim() } : {}),
     keyword: input.keyword.trim(),
     related: splitKeywords(input.related.join('\n')).filter(
       (term) => term !== input.keyword.trim(),

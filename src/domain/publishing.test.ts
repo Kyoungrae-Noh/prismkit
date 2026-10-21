@@ -87,11 +87,11 @@ function publication(keyword = '온누리상품권 환불방법'): Publication {
   }
 }
 function memory() {
-  let raw: string | null = null
+  const rows = new Map<string, string>()
   return {
-    getItem: () => raw,
-    setItem: (_key: string, value: string) => {
-      raw = value
+    getItem: (key = PUBLISHING_KEY) => rows.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      rows.set(key, value)
     },
   }
 }

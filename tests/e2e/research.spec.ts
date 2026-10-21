@@ -9,7 +9,7 @@ test('manual research persists source, dates, bounds and edits without API calls
       external.push(request.url())
   })
   await page.goto('/keywords')
-  await expect(page.getByText('DEMO · 샘플 데이터 모드')).toBeVisible()
+  await expect(page.getByText('LIVE · 실제 키워드 분석')).toBeVisible()
   await page.getByRole('button', { name: '수동 자료 추가' }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('핵심 키워드', { exact: true }).fill('가을 캠핑 조사')
@@ -59,7 +59,7 @@ test('corrupt research storage preserves data and leaves idea management usable'
     localStorage.setItem('prismkit.keyword-research.v1', 'corrupt-original'),
   )
   await page.reload()
-  await expect(page.getByRole('alert')).toContainText('원본은 보존')
+  await expect(page.getByRole('alert').filter({ hasText: '원본은 보존' })).toHaveCount(2)
   await expect(page.getByRole('button', { name: '수동 자료 추가' })).toBeDisabled()
   expect(await page.evaluate(() => localStorage.getItem('prismkit.keyword-research.v1'))).toBe(
     'corrupt-original',

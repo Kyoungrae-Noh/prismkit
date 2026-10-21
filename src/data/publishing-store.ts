@@ -1,3 +1,4 @@
+import { workspaceStorage } from './storage'
 import {
   accounts,
   emptyPublishing,
@@ -58,6 +59,7 @@ export function parsePublishingImport(raw: string): PublishingData {
   return validatePublishing(data)
 }
 export function createPublishingStore(storage: Pick<Storage, 'getItem' | 'setItem'>) {
+  storage = workspaceStorage(storage)
   function read(): PublishingData {
     let raw: string | null
     try {

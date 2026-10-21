@@ -1,19 +1,63 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { createSearchAdProvider } from '../providers/searchad-client'
 import type { SearchAdResponse } from '../providers/searchad-types'
+import type { Usage } from '../../server/searchad/budget'
 import { displayCount } from '../domain/research'
 const provider = createSearchAdProvider()
 export function LiveKeywords({
   onData,
+  keyword,
+  onKeywordChange,
+  initialData = null,
+  initialQueried = '',
 }: {
+  keyword: string
+  onKeywordChange(value: string): void
+  initialData?: SearchAdResponse | null
+  initialQueried?: string
   onData?: (keyword: string, data: SearchAdResponse) => void
 }) {
-  const [keyword, setKeyword] = useState(''),
-    [data, setData] = useState<SearchAdResponse | null>(null),
-    [queried, setQueried] = useState(''),
+  const [data, setData] = useState<SearchAdResponse | null>(initialData),
+    [queried, setQueried] = useState(initialQueried),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [sort, setSort] = useState('total')
+  const [usage, setUsage] = useState<Usage | null>(initialData?.usage ?? null)
+  const [connection, setConnection] = useState(initialData ? '이전 성공 응답' : '확인 불가')
+  useEffect(() => {
+    if (!usage) return
+    const timer = window.setTimeout(
+      () => setUsage(null),
+      Math.max(0, Date.parse(usage.resetsAt) - Date.now()),
+    )
+    return () => clearTimeout(timer)
+  }, [usage])
+  async function readUsage() {
+    try {
+      const response = await fetch('/api/searchad/usage', {
+        headers: { 'X-Prismkit-Request': 'keyword-query' },
+        cache: 'no-store',
+        signal: AbortSignal.timeout(10000),
+      })
+      const value = await response.json()
+      if (
+        !response.ok ||
+        !Number.isSafeInteger(value.used) ||
+        value.used < 0 ||
+        !Number.isSafeInteger(value.remaining) ||
+        value.remaining < 0 ||
+        !Number.isSafeInteger(value.limit) ||
+        value.limit < 1 ||
+        value.limit > 30 ||
+        typeof value.blocked !== 'boolean' ||
+        !Number.isFinite(Date.parse(value.resetsAt))
+      )
+        throw new Error()
+      setUsage(value)
+    } catch {
+      setUsage(null)
+    }
+  }
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (busy) return
@@ -23,10 +67,14 @@ export function LiveKeywords({
     try {
       const response = await provider.query(keyword.trim())
       setData(response)
+      setUsage(response.usage ?? null)
+      setConnection('조회 성공 · VERIFIED')
       onData?.(keyword.trim(), response)
       setQueried(keyword.trim())
     } catch (error) {
       setError(error instanceof Error ? error.message : '조회에 실패했습니다.')
+      setConnection('조회 실패 · 인증/서버 상태 확인 필요')
+      await readUsage()
     } finally {
       setBusy(false)
     }
@@ -56,7 +104,7 @@ export function LiveKeywords({
             required
             maxLength={60}
             value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
+            onChange={(event) => onKeywordChange(event.target.value)}
             placeholder="예: 온누리상품권"
             disabled={busy}
           />
@@ -67,11 +115,45 @@ export function LiveKeywords({
       </form>
       <p className="form-note">
         버튼을 누를 때만 조회합니다. 동일 키워드는 5분 캐시를 사용하며, 최소 10초 간격입니다.
-        {import.meta.env.DEV
-          ? ' 로컬 서버 실행당 최대 10회입니다.'
-          : ' 운영 호출 예산은 총 10회이며 자동 초기화되지 않습니다.'}{' '}
-        별도 과금 여부는 미확정이며 자동 조회하지 않습니다.
+        한국시간 하루 최대 30회이며 자정에 초기화됩니다. 기존 예산 전환 당일은 10회 제한을
+        유지합니다. 별도 과금 여부는 미확정이며 자동 조회하지 않습니다.
       </p>
+      <section aria-label="API 사용량">
+        <p>
+          API 연결 상태: {connection} · 캐시 사용:{' '}
+          {data ? (data.cached ? '예' : '아니요') : '확인 불가'}
+        </p>
+        <p>
+          예산 기준일: {usage?.day ?? '확인 불가'} (KST) · 오늘 사용: {usage?.used ?? '확인 불가'} ·
+          남은 호출: {usage?.remaining ?? '확인 불가'} · 일일 한도: {usage?.limit ?? '확인 불가'}
+        </p>
+        <p>
+          다음 초기화:{' '}
+          {usage
+            ? new Date(usage.resetsAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) + ' KST'
+            : '확인 불가'}{' '}
+          · 마지막 외부 조회 시도:{' '}
+          {usage?.lastQueryAt
+            ? new Date(usage.lastQueryAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }) +
+              ' KST'
+            : '확인 불가'}
+        </p>
+        {usage?.blocked && (
+          <p role="alert">
+            인증 오류 또는 429로 차단되었습니다. 날짜 초기화로 차단을 해제하지 않습니다.
+          </p>
+        )}
+        {usage?.migration && (
+          <p>기존 누적 사용량을 보존하는 전환일입니다. 다음 자정부터 새 일일 한도를 적용합니다.</p>
+        )}
+        <button className="button secondary" onClick={() => void readUsage()}>
+          호출 예산 확인
+        </button>
+        <p className="form-note">
+          예산 확인은 네이버를 호출하지 않습니다. 표시값은 마지막 서버 확인 시점의 값이며 남은
+          횟수가 조회 성공을 보장하지 않습니다.
+        </p>
+      </section>
       {error && <p role="alert">{error}</p>}
       {data && (
         <div aria-live="polite">

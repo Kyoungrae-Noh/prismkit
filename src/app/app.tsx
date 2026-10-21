@@ -19,6 +19,7 @@ import { Dashboard } from '../pages/dashboard'
 import { Ideas } from '../pages/ideas'
 import { Keywords } from '../pages/keywords'
 import { Publishing } from '../pages/publishing'
+import { BackupPage } from '../pages/backup'
 import { Connections } from '../pages/connections'
 import { IdeaForm } from '../components/idea-form'
 import { EmptyState, Modal } from '../components/ui'
@@ -28,6 +29,7 @@ const navigation = [
   { path: '/ideas', label: '글감 관리', icon: FilePenLine },
   { path: '/keywords', label: '키워드 분석', icon: Search },
   { path: '/publishing', label: '경쟁·발행 판단', icon: FilePenLine },
+  { path: '/backup', label: '백업·복원', icon: FilePenLine },
   { path: '/connections', label: '데이터 연결', icon: Plug },
 ]
 export function App() {
@@ -121,7 +123,7 @@ export function App() {
           </div>
           <div className="sidebar-footer">
             <span className="version-dot" />
-            Phase 2D <span>v0.2.0</span>
+            Phase 3A <span>v0.3.0</span>
           </div>
         </div>
       </aside>
@@ -179,6 +181,7 @@ export function App() {
               />
               <Route path="/keywords" element={<Keywords notify={setToast} />} />
               <Route path="/publishing" element={<Publishing />} />
+              <Route path="/backup" element={<BackupPage />} />
               <Route path="/connections" element={<Connections />} />
               <Route
                 path="*"
@@ -226,7 +229,7 @@ export function App() {
               </span>
               <div>
                 <h3>관심 키워드 발견하기</h3>
-                <p>키워드 분석에서 샘플 검색량과 관심도 흐름을 탐색해보세요.</p>
+                <p>글감의 키워드 분석을 열고 조회 버튼을 눌러 실제 검색량을 확인하세요.</p>
               </div>
             </li>
             <li>

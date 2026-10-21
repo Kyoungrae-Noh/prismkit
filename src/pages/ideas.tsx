@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Columns3, FilePenLine, List, Plus, Search, Trash2 } from 'lucide-react'
 import { useWorkspace } from '../app/workspace'
 import { IdeaForm } from '../components/idea-form'
@@ -203,6 +203,13 @@ export function Ideas({ onCreate, notify }: { onCreate(): void; notify(message: 
                     </td>
                     <td className="muted">{formatDate(idea.updatedAt)}</td>
                     <td>
+                      <Link
+                        className="button secondary"
+                        aria-label={`${idea.title} 키워드 분석`}
+                        to={`/keywords?${new URLSearchParams({ keyword: idea.keyword, idea: idea.id })}`}
+                      >
+                        키워드 분석
+                      </Link>
                       <button
                         className="icon-button delete-button"
                         aria-label={`${idea.title} 삭제`}

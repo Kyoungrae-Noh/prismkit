@@ -1,3 +1,5 @@
+import { validDocuments } from '../domain/documents'
+import { workspaceStorage } from './storage'
 import {
   candidateStatuses,
   intents,
@@ -39,6 +41,7 @@ function validInput(value: unknown): boolean {
 function validCandidate(row: Candidate) {
   return (
     validInput(row) &&
+    (row.documents === undefined || validDocuments(row.documents)) &&
     typeof row.key === 'string' &&
     !!row.key &&
     typeof row.group === 'string' &&
@@ -55,6 +58,7 @@ function validCandidate(row: Candidate) {
   )
 }
 export function createCandidateStore(storage: Pick<Storage, 'getItem' | 'setItem'>) {
+  storage = workspaceStorage(storage)
   function list(): SavedCandidate[] {
     let raw: string | null
     try {

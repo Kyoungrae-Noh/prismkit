@@ -61,9 +61,14 @@ describe('Phase 0 workspace flows', () => {
     const user = userEvent.setup()
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
     renderApp('/keywords')
+    await user.click(await screen.findByText('DEMO 예시 살펴보기 · 실제 분석과 무관한 가상 데이터'))
     const search = await screen.findByRole('textbox', { name: '키워드 검색' })
     await user.selectOptions(screen.getByLabelText('키워드 정렬'), 'volume')
-    expect(within(screen.getAllByRole('row')[1]).getByText('건강한 식단')).toBeInTheDocument()
+    expect(
+      within(within(screen.getByLabelText('DEMO 예시 영역')).getAllByRole('row')[1]).getByText(
+        '건강한 식단',
+      ),
+    ).toBeInTheDocument()
     await user.type(search, '없는 키워드')
     expect(screen.getByText('일치하는 샘플 키워드가 없어요')).toBeInTheDocument()
     await user.clear(search)
