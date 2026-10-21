@@ -110,7 +110,9 @@ export function ManuscriptsPage() {
           : '',
         a?.reviewmanUrl ? `내부 링크 후보 (내용·날짜 확인 후 출처 추가): ${a.reviewmanUrl}` : '',
         `검색량 ${c.candidate.mode}: PC ${c.candidate.pc ?? '미확인'} / 모바일 ${c.candidate.mobile ?? '미확인'} / 합계 ${c.candidate.total ?? '미확인'}; ${c.candidate.source}; ${c.candidate.collectedAt ?? '시각 미확인'}`,
-        `경쟁 문서 수: ${ranked?.documents?.count ?? '미확인'}`,
+        c.candidate.discovery
+          ? '통합 분석의 블로그·카페 API 결과 수와 상대 추이는 아래 발굴 검토 근거를 확인하세요.'
+          : `경쟁 문서 수: ${ranked?.documents?.count ?? '미확인'}`,
         ...(c.candidate.source === 'NAVER API HUB 발굴'
           ? c.candidate.reasons.map((r) => `발굴 검토: ${r}`)
           : []),
@@ -119,7 +121,9 @@ export function ManuscriptsPage() {
           : '캡처 근거 미연결',
         a
           ? `차별화: ${a.missingInfo}\n경쟁 관찰: ${a.posts.map((p) => p.features).join('; ')}`
-          : '경쟁 분석 미확인',
+          : c.candidate.discovery
+            ? 'API 제목·요약 기반 경쟁 분석; 본문·실제 검색 순위는 미확인'
+            : '경쟁 분석 미확인',
       ]
         .join('\n')
         .slice(0, 5000)
@@ -146,7 +150,11 @@ export function ManuscriptsPage() {
           [],
       })
       setAssessment(
-        ranked ? [ranked.status, ...ranked.missing, ...ranked.reasons] : ['발행 평가 근거 미확인'],
+        c.candidate.discovery
+          ? c.candidate.reasons
+          : ranked
+            ? [ranked.status, ...ranked.missing, ...ranked.reasons]
+            : ['발행 평가 근거 미확인'],
       )
     } catch (e) {
       setError((e as Error).message)
