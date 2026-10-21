@@ -70,12 +70,10 @@ export async function digest(blob: Blob) {
     .join('')
 }
 export async function validateCaptureBlob(blob: Blob) {
-  if (
-    !['image/png', 'image/jpeg', 'image/webp'].includes(blob.type) ||
-    blob.size < 1 ||
-    blob.size > CAPTURE_FILE_MAX
-  )
-    throw new Error('PNG/JPEG/WebP 파일만 가능하며 파일당 4 MiB 이하입니다.')
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(blob.type))
+    throw new Error('지원하지 않는 이미지 형식입니다. PNG/JPEG/WebP 파일만 가능합니다.')
+  if (blob.size < 1) throw new Error('이미지 파일이 비어 있습니다.')
+  if (blob.size > CAPTURE_FILE_MAX) throw new Error('파일 크기 초과: 파일당 4 MiB 이하입니다.')
   const b = new Uint8Array(await blob.slice(0, 12).arrayBuffer()),
     s = String.fromCharCode(...b)
   if (

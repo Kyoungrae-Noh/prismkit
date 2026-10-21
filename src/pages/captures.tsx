@@ -3,8 +3,6 @@ import { Link } from 'react-router-dom'
 import { useWorkspace } from '../app/workspace'
 import { categories } from '../domain/models'
 import {
-  CAPTURE_LIMIT,
-  CAPTURE_TOTAL_MAX,
   duplicateDrafts,
   emptyCaptures,
   newDraft,
@@ -13,8 +11,10 @@ import {
   type CaptureImage,
 } from '../domain/captures'
 import { createCaptureStore, linkCaptureIdea } from '../data/capture-store'
-import { blobDataUrl, imageVault, prepareCapture } from '../data/capture-images'
+import { blobDataUrl, imageVault } from '../data/capture-images'
 import { extractionProvider } from '../providers/extraction'
+import { createCaptureQueue } from '../data/capture-queue'
+import { pastedImages, transferFiles } from '../data/capture-input'
 
 function CapturePreview({ image }: { image: CaptureImage }) {
   const [url, setUrl] = useState(''),
@@ -55,7 +55,9 @@ export function CapturesPage() {
     [failed, setFailed] = useState<File[]>([]),
     [editing, setEditing] = useState<CaptureDraft | null>(null),
     [deleting, setDeleting] = useState<string | null>(null)
-  const uploading = useRef(false)
+  const queue = useRef<ReturnType<typeof createCaptureQueue> | null>(null)
+  const dragDepth = useRef(0)
+  const [dragging, setDragging] = useState(false)
   function reload() {
     try {
       setData(store.read())
@@ -84,55 +86,47 @@ export function CapturesPage() {
       setError(e instanceof Error ? e.message : '저장 실패')
     }
   }
-  async function upload(files: File[]) {
-    if (uploading.current || !files.length) return
-    if (files.length > CAPTURE_LIMIT) {
-      setError('한 번에 최대 20장을 선택하세요.')
-      return
-    }
-    uploading.current = true
-    setBusy(true)
-    setError('')
-    setFailed([])
-    const next = structuredClone(data),
-      failures: File[] = [],
-      notes: string[] = []
+  function upload(files: File[]) {
     try {
-      for (let n = 0; n < files.length; n++) {
-        const file = files[n]
-        setMessage(`이미지 처리 ${n + 1}/${files.length}`)
-        try {
-          const prepared = await prepareCapture(file)
-          if (next.images.some((i) => i.id === prepared.meta.id)) {
-            notes.push(`${file.name}: 동일 원본 중복 제외`)
-            continue
-          }
-          if (
-            next.images.length >= CAPTURE_LIMIT ||
-            next.images.reduce((s, i) => s + i.size, 0) + file.size > CAPTURE_TOTAL_MAX
-          )
-            throw new Error('현재 보관 한도 20장 / 20 MiB를 초과합니다.')
-          await imageVault.put([{ id: prepared.meta.id, blob: prepared.blob }])
-          next.images.push(prepared.meta)
-        } catch (e) {
-          failures.push(file)
-          notes.push(`${file.name}: ${e instanceof Error ? e.message : '업로드 실패'}`)
-        }
-      }
-      save(next)
-      setFailed(failures)
-      setMessage(
-        `로컬 보관 완료: ${next.images.length - data.images.length}장. ${notes.join(' / ')}`,
-      )
+      const accepted = queue.current?.enqueue(files) ?? false
+      if (accepted) setError('')
+      return accepted
     } catch (e) {
-      setError(e instanceof Error ? e.message : '저장 실패')
-      setFailed(files)
-      setMessage('이미지 목록 저장 실패. 다시 시도할 수 있습니다.')
-    } finally {
-      uploading.current = false
-      setBusy(false)
+      setError(e instanceof Error ? e.message : '이미지 추가 실패')
+      return false
     }
   }
+  useEffect(() => {
+    const inbox = createCaptureQueue({
+      store,
+      progress: (pending) => {
+        setBusy(true)
+        setFailed([])
+        setMessage(`이미지 처리 중 · 대기 포함 ${pending}장`)
+      },
+      saved: setData,
+      complete: ({ added, failed: failures, notes }) => {
+        setBusy(false)
+        setFailed(failures)
+        const status = added
+          ? `로컬 보관 완료: ${added}장. 이미지 추가 완료.`
+          : failures.length
+            ? '이미지 추가 실패.'
+            : '새 이미지 추가 없음.'
+        setMessage(`${status} ${notes.join(' / ')}`)
+      },
+    })
+    queue.current = inbox
+    const onPaste = (event: ClipboardEvent) => {
+      if (upload(pastedImages(event))) event.preventDefault()
+    }
+    window.addEventListener('paste', onPaste)
+    return () => {
+      window.removeEventListener('paste', onPaste)
+      inbox.close()
+      queue.current = null
+    }
+  }, [])
   const groups = duplicateDrafts(data.drafts)
   return (
     <div className="capture-page">
@@ -159,11 +153,27 @@ export function CapturesPage() {
           사라질 수 있으니 전체 JSON 백업을 내려받으세요.
         </p>
         <div
-          className="capture-drop"
+          className={`capture-drop${dragging ? ' is-dragging' : ''}`}
+          onDragEnter={(e) => {
+            e.preventDefault()
+            dragDepth.current++
+            setDragging(true)
+          }}
+          onDragLeave={() => {
+            dragDepth.current = Math.max(0, dragDepth.current - 1)
+            if (!dragDepth.current) setDragging(false)
+          }}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault()
-            void upload([...e.dataTransfer.files])
+            dragDepth.current = 0
+            setDragging(false)
+            const files = transferFiles(e.dataTransfer)
+            if (files.length) upload(files)
+            else
+              setError(
+                '브라우저가 이미지 파일을 제공하지 않았습니다. 클립보드 캡처 후 붙여넣기 또는 파일 선택을 이용하세요.',
+              )
           }}
         >
           <label>
@@ -173,7 +183,6 @@ export function CapturesPage() {
               type="file"
               accept="image/png,image/jpeg,image/webp"
               multiple
-              disabled={busy}
               onChange={(e) => {
                 const files = [...(e.target.files ?? [])]
                 e.target.value = ''
@@ -181,8 +190,17 @@ export function CapturesPage() {
               }}
             />
           </label>
-          <p>여기에 이미지를 끌어 놓아도 됩니다. 등록 시 네이버 API를 호출하지 않습니다.</p>
+          <p>캡처 이미지를 드래그하거나 Ctrl+V / Cmd+V로 붙여넣으세요.</p>
+          <p>Windows: Win+Shift+S → Ctrl+V · Mac: Cmd+Ctrl+Shift+4 → Cmd+V</p>
+          <p>
+            Mac 오른쪽 아래 플로팅 캡처 썸네일도 드래그할 수 있습니다. 브라우저가 이미지 파일을
+            전달하는 경우에 지원합니다.
+          </p>
+          <p>
+            텍스트 입력 중에는 텍스트 붙여넣기를 우선합니다. 등록 시 네이버 API를 호출하지 않습니다.
+          </p>
         </div>
+        <p aria-live="polite">현재 등록 이미지: {data.images.length} / 20장</p>
         {busy && <progress aria-label="이미지 처리 중" />}
         {!!failed.length && (
           <button className="button secondary" disabled={busy} onClick={() => void upload(failed)}>

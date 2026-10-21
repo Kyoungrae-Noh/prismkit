@@ -3115,6 +3115,12 @@ textarea {
 .capture-drop input {
   max-width: 100%;
 }
+.capture-drop.is-dragging {
+  border-color: #28745b;
+  background: #edf7f1;
+  outline: 2px solid #28745b;
+  outline-offset: 3px;
+}
 .capture-actions {
   display: flex;
   flex-wrap: wrap;
