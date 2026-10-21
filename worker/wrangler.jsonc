@@ -6,6 +6,9 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "preview_urls": false,
+  "vars": {
+    "AI_COST_APPROVAL": "gpt-4.1-mini-2025-04-14:daily30:monthly5USD:2026-11-21",
+  },
   "observability": {
     "enabled": false,
   },
@@ -25,6 +28,7 @@
   ],
   "secrets": {
     "required": [
+      "OPENAI_API_KEY",
       "NAVER_SEARCHAD_API_KEY",
       "NAVER_SEARCHAD_SECRET_KEY",
       "NAVER_SEARCHAD_CUSTOMER_ID",

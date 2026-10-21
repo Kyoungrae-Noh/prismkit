@@ -5,6 +5,7 @@
   "compatibility_date": "2026-10-19",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
+    "AI_ENABLED": "true",
     "ACCESS_ISSUER": "https://comic-test-pages.cloudflareaccess.com",
     "ACCESS_AUD": "26ec13b3c8d38c2d9d11d84d0fcca7d431be8f172812dae35dfc9716d1000869",
   },
@@ -20,6 +21,7 @@
   "env": {
     "preview": {
       "vars": {
+        "AI_ENABLED": "false",
         "ACCESS_ISSUER": "https://comic-test-pages.cloudflareaccess.com",
         "ACCESS_AUD": "26ec13b3c8d38c2d9d11d84d0fcca7d431be8f172812dae35dfc9716d1000869",
       },
