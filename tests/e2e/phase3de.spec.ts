@@ -136,6 +136,7 @@ test('three Naver accounts and separate Reviewman drafts edit, persist, export a
   await expect(page.getByText('데이터 부족', { exact: true })).toBeVisible()
   expect(calls).toBe(0)
   await page.getByRole('button', { name: '원고 연결 상태 확인' }).click()
+  await expect(page.getByText(/생성 가능 5회 · 오늘 0 \/ 5/)).toBeVisible()
   await page.getByRole('checkbox', { name: /개인정보를 확인했으며/ }).check()
   for (const account of ['nkr09134', 'nkr09135', 'nkr09136']) {
     await page.getByLabel('블로그 계정', { exact: true }).selectOption(account)

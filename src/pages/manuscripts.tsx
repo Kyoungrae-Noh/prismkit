@@ -416,8 +416,9 @@ export function ManuscriptsPage() {
         </div>
         {statusError && <p role="alert">{statusError}</p>}
         <p>
-          오늘 {status?.used ?? '미확인'} / 5 · 이번 달 {status?.monthUsed ?? '미확인'} / 50 · 월
-          예약 ${status?.reservedUsd?.toFixed(2) ?? '미확인'} · 응답 토큰 추정액 $
+          생성 가능 {status?.remaining ?? '미확인'}회 · 오늘 {status?.used ?? '미확인'} / 5 · 이번
+          달 {status?.monthUsed ?? '미확인'} / 50 · 월 예약 $
+          {status?.reservedUsd?.toFixed(2) ?? '미확인'} · 응답 토큰 추정액 $
           {status?.estimatedUsd?.toFixed(5) ?? '미확인'}
         </p>
         <label>
