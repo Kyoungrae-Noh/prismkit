@@ -330,6 +330,48 @@ test('draft routes enforce Access before RPC, method, origin, header and bounded
   assert.ok(huge.status >= 400)
   assert.equal(calls, 1)
 })
+test('older open tabs receive the legacy shape while new clients retain comparison tables', async () => {
+  let calls = 0
+  const comparison = { columns: ['조건', '내용'], rows: [['대상', '확인 필요']] }
+  const rpc = () => ({
+    draftUsage: async () => Response.json({}),
+    draftGenerate: async () => {
+      calls++
+      return Response.json(
+        {
+          content: { ...content, comparison },
+          generated: { ...content, comparison },
+        },
+        { headers: { 'cache-control': 'no-store' } },
+      )
+    },
+  })
+  for (const format of ['', '2']) {
+    const r = await draftRoute(
+      new Request('https://prismkit.online/api/ai/drafts/generate', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-prismkit-request': 'draft-ai',
+          ...(format ? { 'x-prismkit-draft-format': format } : {}),
+        },
+        body: JSON.stringify({ brief, id: 'compatibility-request' }),
+      }),
+      rpc,
+    )
+    assert.equal(r.status, 200)
+    assert.equal(r.headers.get('cache-control'), 'no-store')
+    const m = (await r.json()) as {
+      content: Record<string, unknown>
+      generated: Record<string, unknown>
+    }
+    assert.equal(m.content.title, content.title)
+    assert.equal(m.generated.title, content.title)
+    assert.deepEqual(m.content.comparison, format ? comparison : undefined)
+    assert.deepEqual(m.generated.comparison, format ? comparison : undefined)
+  }
+  assert.equal(calls, 2, 'one RPC per explicit request; no retries')
+})
 test('provider timeout releases lease without refund or retry', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const s = memory()

@@ -11,6 +11,7 @@ async function request(path: string, body?: unknown, fetcher: typeof fetch = fet
       signal: controller.signal,
       headers: {
         'X-Prismkit-Request': 'draft-ai',
+        'X-Prismkit-Draft-Format': '2',
         ...(body ? { 'Content-Type': 'application/json' } : {}),
       },
       ...(body ? { body: JSON.stringify(body) } : {}),

@@ -20,6 +20,7 @@ it('sends only explicit generation requests with same-origin credentials and nev
       expect(init?.credentials).toBe('same-origin')
       expect(init?.redirect).toBe('error')
       expect(init?.method).toBe('POST')
+      expect(new Headers(init?.headers).get('x-prismkit-draft-format')).toBe('2')
       return Response.json(
         { error: { code: 'BLOCKED', message: 'secret response' } },
         { status: 429 },
