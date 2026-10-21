@@ -1,3 +1,4 @@
+import type { DraftSource } from './manuscripts'
 import { validDocuments, type DocumentEvidence } from './documents'
 import type { Count } from './research'
 export const intents = [
@@ -38,6 +39,7 @@ export interface IntentClassifier {
   classify(keyword: string): Promise<IntentResult>
 }
 export interface Candidate extends CandidateInput {
+  discovery?: { title: string; intent: string; sources: DraftSource[] }
   key: string
   originals: CandidateInput[]
   intent: Intent

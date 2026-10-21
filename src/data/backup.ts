@@ -61,17 +61,26 @@ function shapes(b: Backup) {
       x,
       'keyword pc mobile total collectedAt source mode documents' +
         (full
-          ? ' key originals intent review group conflict related reviewman status reasons'
+          ? ' key originals intent review group conflict related reviewman status reasons discovery'
           : ''),
     )
     if (x.documents) fields(x.documents, 'count source checkedDate scope')
+    if (x.discovery) {
+      fields(x.discovery, 'title intent sources')
+      for (const source of x.discovery.sources)
+        fields(source, 'id title url excerpt checkedDate kind')
+    }
+    if (full)
+      for (const original of x.originals) input(original as SavedCandidate['candidate'], false)
   }
   for (const x of b.candidates) {
-    fields(x, 'id candidate context ideaId savedAt ruleVersion')
+    fields(x, 'id candidate context ideaId savedAt ruleVersion analysisHistory')
     fields(x.context, 'topic reviewmanTopics')
     input(x.candidate, true)
-    for (const original of x.candidate.originals)
-      input(original as SavedCandidate['candidate'], false)
+    for (const history of x.analysisHistory ?? []) {
+      fields(history, 'candidate savedAt')
+      input(history.candidate, true)
+    }
   }
   fields(b.publishing, 'version analyses publications historyChecked')
   fields(b.publishing.historyChecked, 'nkr09134 nkr09135 nkr09136')

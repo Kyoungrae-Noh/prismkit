@@ -3462,3 +3462,17 @@ textarea {
     padding: 9px 11px;
   }
 }
+
+/* Phase 3I-2: one action per discovery row, one integrated detail view. */
+.discovery-table td:last-child { width: 145px; min-width: 145px; }
+.discovery-table td:last-child .discovery-actions { display: flex; flex-direction: column; align-items: flex-start; }
+.analysis-summary { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin: 18px 0; }
+.analysis-summary > div { padding: 14px; background: #f3f7f2; border: 1px solid #e2e9df; border-radius: 10px; display: flex; flex-direction: column; gap: 8px; }
+.analysis-summary strong { font-size: 22px; overflow-wrap: anywhere; }
+.analysis-summary small { color: #607169; }
+.analysis-verdict { padding: 14px; border-left: 3px solid #d17b43; background: #faf5ed; }
+.integrated-detail { scroll-margin-top: 20px; }
+.integrated-detail p { line-height: 1.7; }
+.integrated-detail .table-scroll { margin: 10px 0; }
+@media(max-width:900px) { .analysis-summary { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:400px) { .analysis-summary { grid-template-columns: 1fr; } }

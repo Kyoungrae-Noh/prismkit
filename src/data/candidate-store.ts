@@ -1,3 +1,4 @@
+import { validateBrief } from '../domain/manuscripts'
 import { validDocuments } from '../domain/documents'
 import { workspaceStorage } from './storage'
 import {
@@ -14,6 +15,7 @@ export interface SavedCandidate {
   context: AnalysisContext
   ideaId: string | null
   savedAt: string
+  analysisHistory?: { candidate: Candidate; savedAt: string }[]
   ruleVersion: 'rules-v1'
 }
 function validCount(value: unknown) {
@@ -39,6 +41,25 @@ function validInput(value: unknown): boolean {
   )
 }
 function validCandidate(row: Candidate) {
+  if (row.discovery !== undefined) {
+    try {
+      validateBrief({
+        candidateId: 'validation',
+        ideaId: null,
+        keyword: row.keyword,
+        topic: row.discovery.title,
+        intent: row.discovery.intent,
+        type: 'naver',
+        account: 'nkr09134',
+        category: 'lifestyle',
+        angle: '',
+        evidence: '',
+        sources: row.discovery.sources,
+      })
+    } catch {
+      return false
+    }
+  }
   return (
     validInput(row) &&
     (row.documents === undefined || validDocuments(row.documents)) &&
@@ -79,6 +100,15 @@ export function createCandidateStore(storage: Pick<Storage, 'getItem' | 'setItem
           ids.has(item.id) ||
           item.ruleVersion !== 'rules-v1' ||
           !validCandidate(item.candidate) ||
+          (item.analysisHistory !== undefined &&
+            (!Array.isArray(item.analysisHistory) ||
+              item.analysisHistory.some(
+                (h) =>
+                  !h ||
+                  !validCandidate(h.candidate) ||
+                  typeof h.savedAt !== 'string' ||
+                  !Number.isFinite(Date.parse(h.savedAt)),
+              ))) ||
           typeof item.savedAt !== 'string' ||
           !Number.isFinite(Date.parse(item.savedAt)) ||
           !(item.ideaId === null || typeof item.ideaId === 'string') ||
@@ -137,5 +167,43 @@ export function createCandidateStore(storage: Pick<Storage, 'getItem' | 'setItem
     item.ideaId = ideaId
     write(items)
   }
-  return { list, save, link }
+  function saveAnalysis(candidate: Candidate, context: AnalysisContext, ideaId: string | null) {
+    if (
+      !candidate.discovery ||
+      candidate.source !== 'NAVER API HUB 발굴' ||
+      !validCandidate(candidate)
+    )
+      throw Error('통합 분석 자료 형식을 확인하세요.')
+    const items = list(),
+      previous = items.find(
+        (i) =>
+          i.candidate.source === candidate.source &&
+          i.candidate.mode === candidate.mode &&
+          normalizeKeyword(i.candidate.keyword) === normalizeKeyword(candidate.keyword) &&
+          i.candidate.discovery?.title === candidate.discovery?.title,
+      )
+    if (previous) {
+      if (JSON.stringify(previous.candidate) !== JSON.stringify(candidate)) {
+        previous.analysisHistory = [
+          ...(previous.analysisHistory ?? []),
+          { candidate: structuredClone(previous.candidate), savedAt: previous.savedAt },
+        ]
+        previous.candidate = structuredClone(candidate)
+        previous.savedAt = new Date().toISOString()
+      }
+      write(items)
+      return previous.id
+    }
+    const item: SavedCandidate = {
+      id: crypto.randomUUID(),
+      candidate: structuredClone(candidate),
+      context: structuredClone(context),
+      ideaId,
+      savedAt: new Date().toISOString(),
+      ruleVersion: 'rules-v1',
+    }
+    write([item, ...items])
+    return item.id
+  }
+  return { list, save, link, saveAnalysis }
 }

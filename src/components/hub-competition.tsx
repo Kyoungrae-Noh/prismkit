@@ -6,14 +6,14 @@ import { createPublishingStore } from '../data/publishing-store'
 import { normalizeKeyword } from '../domain/candidates'
 import {
   analyzeDiscovery,
-  discoveryRecommendation,
   discoveryToCandidate,
   type DiscoveryAnalysis,
   type DiscoveryCandidate,
 } from '../domain/discovery'
-import { requestHub } from '../providers/hub-client'
+import { analysisHub, analysisVolume } from '../providers/analysis-client'
+import { analysisKeyword } from '../domain/integrated-analysis'
 import type { LiveCandidateBatch } from './candidate-panel'
-import { HubEvidence } from './hub-evidence'
+import { IntegratedDetail } from './integrated-detail'
 
 /** Explicit HUB queries reuse already-fetched search volume; typing and navigation never call APIs. */
 export function HubCompetition({
@@ -37,7 +37,7 @@ export function HubCompetition({
     [max, setMax] = useState('')
   const running = useRef(false)
   async function analyze() {
-    const term = keyword.trim()
+    const term = analysisKeyword(keyword)
     if (running.current || !term) return
     running.current = true
     setBusy(true)
@@ -46,22 +46,28 @@ export function HubCompetition({
       const end = Date.now() + 9 * 3600000 - 86400000
       const analysis = await analyzeDiscovery(
         term,
-        requestHub,
+        analysisHub,
         async () => {
-          if (!live || normalizeKeyword(live.keyword) !== normalizeKeyword(term))
-            throw Error('위에서 검색량을 조회하세요. HUB 조회가 검색광고를 자동 호출하지 않습니다.')
-          return live.data
+          if (
+            live &&
+            normalizeKeyword(live.keyword) === normalizeKeyword(term) &&
+            Date.now() - Date.parse(live.data.volume.collectedAt ?? '') < 300000
+          )
+            return { ...live.data, cached: true }
+          return analysisVolume(term)
         },
         {
           startDate: new Date(end - 29 * 86400000).toISOString().slice(0, 10),
           endDate: new Date(end).toISOString().slice(0, 10),
         },
+        '',
+        { previous: result?.analysis },
       )
       const saved = createCandidateStore(localStorage).list(),
         published = createPublishingStore(localStorage).read().publications
       const candidate: DiscoveryCandidate = {
         key: term,
-        title: term,
+        title: keyword.trim(),
         keyword: term,
         mode: 'LIVE',
         sources: analysis.results.flatMap((r) =>
@@ -95,36 +101,27 @@ export function HubCompetition({
       setBusy(false)
     }
   }
-  function manuscript() {
+  function manuscript(toManuscript = true) {
     if (!result) return
     try {
       const store = createCandidateStore(localStorage),
         c = result.candidate
-      store.save(
-        [discoveryToCandidate(c, result.analysis)],
+      const id = store.saveAnalysis(
+        discoveryToCandidate(c, result.analysis),
         { topic: c.title, reviewmanTopics: [] },
         ideaId,
       )
-      const saved = store
-        .list()
-        .find(
-          (s) =>
-            s.candidate.mode === 'LIVE' &&
-            normalizeKeyword(s.candidate.keyword) === normalizeKeyword(c.keyword),
-        )
-      if (saved) navigate(`/manuscripts?candidate=${encodeURIComponent(saved.id)}`)
+      if (toManuscript) navigate(`/manuscripts?candidate=${encodeURIComponent(id)}`)
+      else setMessage('후보를 저장했습니다. 기존 분석 이력과 함께 전체 JSON 백업에 포함됩니다.')
     } catch (e) {
       setMessage((e as Error).message)
     }
   }
   const current =
-    result && normalizeKeyword(result.candidate.keyword) === normalizeKeyword(keyword)
-      ? result
-      : null
+    result && normalizeKeyword(result.candidate.title) === normalizeKeyword(keyword) ? result : null
   const blog = current?.analysis.results.find((r) => r.api === 'blog')?.total,
     cafe = current?.analysis.results.find((r) => r.api === 'cafe')?.total,
     volume = current?.analysis.volume?.total
-  const rec = current ? discoveryRecommendation(current.candidate, current.analysis) : null
   const matches =
     (!min || (typeof volume === 'number' && volume >= Number(min))) &&
     (!max || (typeof blog === 'number' && blog <= Number(max)))
@@ -133,7 +130,7 @@ export function HubCompetition({
       <div className="discovery-heading">
         <div>
           <h2>경쟁 결과·검색 추이</h2>
-          <p>블로그·카페 API 결과 수와 기존 검색량을 함께 검토합니다.</p>
+          <p>핵심 키워드의 검색량·블로그·카페·트렌드를 한 번에 조회합니다.</p>
         </div>
         <button
           className="button primary"
@@ -144,8 +141,9 @@ export function HubCompetition({
         </button>
       </div>
       <p>
-        선택 키워드: {keyword || '위에서 입력하세요'} · 클릭 시 HUB 최대 3회. API 결과 수는 통합검색
-        전체 문서 수·노출 순위가 아닙니다.
+        분석 핵심어: {analysisKeyword(keyword) || '위에서 입력하세요'} · 예상 외부 호출 최대 4회
+        (검색광고 1회 + HUB 3회). 기존 검색량·캐시를 우선 사용합니다. API 결과 수는 통합검색 전체
+        문서 수·노출 순위가 아닙니다.
       </p>
       {busy && <p role="status">경쟁 결과를 조회하고 있습니다…</p>}
       {message && <p role="status">{message}</p>}
@@ -187,7 +185,7 @@ export function HubCompetition({
           </button>
         </div>
       </details>
-      {current && rec && (
+      {current && (
         <>
           <div className="table-scroll">
             <table>
@@ -211,21 +209,19 @@ export function HubCompetition({
               </tbody>
             </table>
           </div>
-          <p>검색량 조회: {current.analysis.volumeAt ?? '미조회'}</p>
-          <strong>{rec.status}</strong>
-          <p>미확인: {rec.missing.join(', ')}</p>
-          <details className="discovery-advanced">
-            <summary>추천 근거·출처 보기</summary>
-            <ul>
-              {rec.reasons.map((r, i) => (
-                <li key={i}>{r}</li>
-              ))}
-            </ul>
-            <HubEvidence results={current.analysis.results} />
-          </details>
-          <button className="button" onClick={manuscript} disabled={busy}>
-            후보 저장·원고 제작
-          </button>
+          <IntegratedDetail
+            candidate={current.candidate}
+            analysis={current.analysis}
+            busy={busy}
+            expectedCalls={4}
+            onAnalyze={() => void analyze()}
+            onSave={manuscript}
+            onReview={(review) =>
+              setResult((value) =>
+                value ? { ...value, analysis: { ...value.analysis, review } } : value,
+              )
+            }
+          />
         </>
       )}
     </section>

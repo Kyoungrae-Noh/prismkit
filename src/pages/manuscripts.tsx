@@ -128,11 +128,22 @@ export function ManuscriptsPage() {
         ideaId: c.ideaId,
         keyword: c.candidate.keyword,
         topic:
-          ideas.find((i) => i.id === c.ideaId)?.title ?? c.context.topic ?? c.candidate.keyword,
-        intent: d?.intent || manual?.intent || ranked?.intent || '사용자 확인 필요',
+          c.candidate.discovery?.title ??
+          ideas.find((i) => i.id === c.ideaId)?.title ??
+          c.context.topic ??
+          c.candidate.keyword,
+        intent:
+          c.candidate.discovery?.intent ||
+          d?.intent ||
+          manual?.intent ||
+          ranked?.intent ||
+          '사용자 확인 필요',
         evidence,
         angle: brief.angle || a?.missingInfo || '',
-        sources: store.read().find((m) => m.brief.candidateId === id)?.brief.sources ?? [],
+        sources:
+          store.read().find((m) => m.brief.candidateId === id)?.brief.sources ??
+          c.candidate.discovery?.sources ??
+          [],
       })
       setAssessment(
         ranked ? [ranked.status, ...ranked.missing, ...ranked.reasons] : ['발행 평가 근거 미확인'],

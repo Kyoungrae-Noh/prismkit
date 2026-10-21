@@ -78,10 +78,21 @@ export async function demoHub(r: HubRequest): Promise<HubResult> {
       series: [
         {
           title: r.query,
-          points: Array.from({ length: 14 }, (_, i) => ({
-            date: new Date(Date.parse(start) + i * 86400000).toISOString().slice(0, 10),
-            ratio: 30 + i * 4,
-          })),
+          points: Array.from(
+            {
+              length: Math.min(
+                367,
+                Math.max(
+                  14,
+                  Math.round((Date.parse(r.endDate ?? start) - Date.parse(start)) / 86400000) + 1,
+                ),
+              ),
+            },
+            (_, i) => ({
+              date: new Date(Date.parse(start) + i * 86400000).toISOString().slice(0, 10),
+              ratio: Math.min(100, 30 + i * 4),
+            }),
+          ),
         },
       ],
     }

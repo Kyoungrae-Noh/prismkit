@@ -15,7 +15,7 @@ test('competition joins matching search volume and hands evidence to drafts with
     const meta = {
       source: { id: 'searchad', label: '테스트 검색광고', mode: 'API' },
       verification: 'VERIFIED',
-      collectedAt: '2026-10-21T12:00:00Z',
+      collectedAt: new Date().toISOString(),
       checkedDate: '2026-10-21',
       error: null,
       missing: [],
@@ -50,17 +50,17 @@ test('competition joins matching search volume and hands evidence to drafts with
   await search.getByRole('button', { name: '검색량 조회', exact: true }).click()
   await expect(search.getByText('LIVE · VERIFIED')).toBeVisible()
   await competition.getByRole('button', { name: '경쟁·트렌드 조회' }).click()
-  await expect(competition.getByText('발행 검토 추천', { exact: true })).toBeVisible()
+  await expect(competition.getByText('추가 조사 필요', { exact: true })).toBeVisible()
   await expect(competition.locator('tbody tr').first()).toContainText('3500')
   await expect(competition.locator('tbody tr').first()).toContainText('420')
   await expect(competition.locator('tbody tr').first()).toContainText('180')
   expect(queries).toEqual(['blog', 'cafe', 'trend'])
   expect(searchCalls).toBe(1)
   await search.getByLabel('조회할 키워드').fill('다른 키워드')
-  await expect(competition.getByRole('button', { name: '후보 저장·원고 제작' })).toHaveCount(0)
+  await expect(competition.getByRole('button', { name: '원고 제작', exact: true })).toHaveCount(0)
   expect(queries).toHaveLength(3)
   await search.getByLabel('조회할 키워드').fill('분석 테스트')
-  await competition.getByRole('button', { name: '후보 저장·원고 제작' }).click()
+  await competition.getByRole('button', { name: '원고 제작', exact: true }).click()
   await expect(page).toHaveURL(/\/manuscripts\?candidate=/)
   await expect(page.getByLabel('발행 후보')).not.toHaveValue('')
   await expect
@@ -102,6 +102,6 @@ test('competition preserves partial results after 429 and never retries or inven
   await expect(competition.locator('tbody tr').first()).toContainText('180')
   await expect(competition.getByText('추가 조사 필요', { exact: true })).toBeVisible()
   expect(queries).toEqual(['blog', 'cafe', 'trend'])
-  expect(searchCalls).toBe(0)
+  expect(searchCalls).toBe(1)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })

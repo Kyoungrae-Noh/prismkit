@@ -1,4 +1,6 @@
-import { HubEvidence } from './hub-evidence'
+import { IntegratedDetail } from './integrated-detail'
+import { analysisKeyword } from '../domain/integrated-analysis'
+import { analysisHub, analysisVolume } from '../providers/analysis-client'
 import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useWorkspace } from '../app/workspace'
@@ -16,8 +18,7 @@ import {
   type DiscoveryAnalysis,
   type DiscoveryCandidate,
 } from '../domain/discovery'
-import { demoHub, fetchHubStatus, requestHub } from '../providers/hub-client'
-import { createSearchAdProvider } from '../providers/searchad-client'
+import { demoHub, fetchHubStatus } from '../providers/hub-client'
 import { hubLabels, type HubStatus } from '../providers/hub-types'
 import type { SearchAdResponse } from '../providers/searchad-types'
 const interests = ['경제·금융', '생활정보', 'IT·디지털', '여행', '쇼핑', '부동산']
@@ -64,7 +65,7 @@ export function DiscoveryPanel() {
     [hideDuplicates, setHideDuplicates] = useState(false)
   const running = useRef(false)
   const seeds = discoverySeeds([...custom.split(/[,\n]/).filter(Boolean), ...selected], ideas, [])
-  const query = mode === 'DEMO' ? demoHub : requestHub
+  const query = mode === 'DEMO' ? demoHub : analysisHub
   async function run(label: string, work: () => Promise<void>) {
     if (running.current) return
     running.current = true
@@ -122,12 +123,17 @@ export function DiscoveryPanel() {
     )
   }
   async function detail(c: DiscoveryCandidate) {
+    setExpanded(c.key)
     const result = await analyzeDiscovery(
-      c.keyword,
+      analysisKeyword(c.keyword),
       query,
-      mode === 'DEMO' ? demoVolume : createSearchAdProvider().query,
+      mode === 'DEMO' ? demoVolume : analysisVolume,
       { ...dates, device },
       category,
+      {
+        previous: analysis[c.key],
+        onProgress: (value) => setAnalysis((current) => ({ ...current, [c.key]: value })),
+      },
     )
     setAnalysis((current) => ({ ...current, [c.key]: result }))
     setExpanded(c.key)
@@ -144,26 +150,13 @@ export function DiscoveryPanel() {
       const linkedIdea = ideas.find(
         (i) => normalizeKeyword(i.keyword) === normalizeKeyword(c.keyword),
       )
-      const result = store.save(
-        [candidate],
+      const id = store.saveAnalysis(
+        candidate,
         { topic: c.title, reviewmanTopics: [] },
         linkedIdea?.id ?? null,
       )
-      setMessage(
-        result.added
-          ? '후보를 저장했습니다. 전체 JSON 백업에 포함됩니다.'
-          : '이미 저장된 후보입니다. 기존 자료를 보존했습니다.',
-      )
-      if (manuscript) {
-        const saved = store
-          .list()
-          .find(
-            (s) =>
-              s.candidate.mode === c.mode &&
-              normalizeKeyword(s.candidate.keyword) === normalizeKeyword(c.keyword),
-          )
-        if (saved) navigate(`/manuscripts?candidate=${encodeURIComponent(saved.id)}`)
-      }
+      setMessage('후보를 저장했습니다. 기존 분석 이력과 함께 전체 JSON 백업에 포함됩니다.')
+      if (manuscript) navigate(`/manuscripts?candidate=${encodeURIComponent(id)}`)
     } catch (e) {
       setMessage((e as Error).message)
     }
@@ -241,7 +234,9 @@ export function DiscoveryPanel() {
         <small>조회 주제: {seeds.join(' · ') || '선택 필요'} · 최대 2개</small>
       </div>
       <p className="discovery-hold">
-        LIVE 발굴은 버튼을 누를 때만 실행됩니다. 후보 수집 후 선택한 글감만 상세 분석하세요.
+        LIVE 발굴은 버튼을 누를 때만 실행됩니다. 예상 외부 호출:{' '}
+        {mode === 'DEMO' ? 0 : seeds.length * 2 + (category ? 1 : 0)}회 이하. 상세 분석은 검색광고
+        1회와 HUB {category ? 4 : 3}회 이하이며 캐시 적중 시 줄어듭니다.
       </p>
       <details className="discovery-advanced">
         <summary>고급 설정·API 상태·실험용 필터</summary>
@@ -407,7 +402,8 @@ export function DiscoveryPanel() {
                 <tr>
                   <th>글감·키워드</th>
                   <th>출처·중복</th>
-                  <th>검색량 / API 결과 수</th>
+                  <th>검색량 / 블로그 결과 수</th>
+                  <th>분석 상태</th>
                   <th>검토 판단</th>
                   <th>다음 단계</th>
                 </tr>
@@ -420,7 +416,7 @@ export function DiscoveryPanel() {
                     <tr key={c.key}>
                       <td>
                         <strong>{c.title}</strong>
-                        <small>{c.keyword}</small>
+                        <small>분석 핵심어: {analysisKeyword(c.keyword)}</small>
                       </td>
                       <td>
                         {[...new Set(c.sources.map((s) => s.api))].join(' · ')}
@@ -432,6 +428,15 @@ export function DiscoveryPanel() {
                         <small>검색량 / 블로그 API 결과 수</small>
                       </td>
                       <td>
+                        {busy && expanded === c.key
+                          ? '분석 중'
+                          : !a
+                            ? '미조회'
+                            : a.errors.length
+                              ? '완료 · 일부 실패/자료 부족'
+                              : '분석 완료'}
+                      </td>
+                      <td>
                         <strong>{rec.status}</strong>
                         <small>미확인 {rec.missing.length}개 · 근거에서 확인</small>
                       </td>
@@ -440,30 +445,20 @@ export function DiscoveryPanel() {
                           <button
                             className="button"
                             disabled={!!busy}
-                            onClick={() => void run('상세 분석 중', () => detail(c))}
+                            onClick={() => {
+                              setExpanded(c.key)
+                              if (!analysis[c.key]) void run('상세 분석 중', () => detail(c))
+                            }}
                           >
                             상세 분석
                           </button>
-                          <button
-                            className="button"
-                            onClick={() => setExpanded(expanded === c.key ? '' : c.key)}
-                          >
-                            근거
-                          </button>
-                          <button
-                            className="button"
-                            disabled={!!busy}
-                            onClick={() => save(c, false)}
-                          >
-                            후보 저장
-                          </button>
-                          <button
-                            className="button"
-                            disabled={!!busy || c.mode === 'DEMO'}
-                            onClick={() => save(c, true)}
-                          >
-                            원고 제작
-                          </button>
+                          <small>
+                            {mode === 'DEMO'
+                              ? '외부 호출 0회'
+                              : a
+                                ? '기존 결과 열기 · 0회'
+                                : `최대 ${category ? 5 : 4}회 · 검색광고 포함`}
+                          </small>
                         </div>
                       </td>
                     </tr>
@@ -477,23 +472,22 @@ export function DiscoveryPanel() {
       {rows
         .filter((c) => c.key === expanded)
         .map((c) => {
-          const a = analysis[c.key],
-            rec = discoveryRecommendation(c, a)
+          const a = analysis[c.key]
           return (
-            <section className="discovery-evidence" key={c.key}>
-              <h3>{c.title} — 근거</h3>
-              <ul>
-                {rec.reasons.map((r, i) => (
-                  <li key={i}>{r}</li>
-                ))}
-              </ul>
-              <p>미확인: {rec.missing.join(', ')}</p>
-              {a?.related.length ? <p>검색광고 관련어: {a.related.join(' · ')}</p> : null}
-              <HubEvidence results={a?.results ?? []} />
-              <Link to={`/keywords?keyword=${encodeURIComponent(c.keyword)}`}>
-                기존 키워드 분석으로 이동
-              </Link>
-            </section>
+            <IntegratedDetail
+              key={c.key}
+              candidate={{ ...c, keyword: analysisKeyword(c.keyword) }}
+              analysis={a}
+              busy={!!busy}
+              expectedCalls={category ? 5 : 4}
+              onAnalyze={() => void run('상세 분석 중', () => detail(c))}
+              onSave={(manuscript) => save(c, manuscript)}
+              onReview={(review) =>
+                setAnalysis((current) =>
+                  current[c.key] ? { ...current, [c.key]: { ...current[c.key], review } } : current,
+                )
+              }
+            />
           )
         })}
     </section>

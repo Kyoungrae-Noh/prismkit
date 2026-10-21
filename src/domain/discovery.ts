@@ -1,3 +1,10 @@
+import {
+  evaluatePublication,
+  trendAssessment,
+  type AnalysisApi,
+  type ApiAssessment,
+  type EditorialReview,
+} from './integrated-analysis'
 import { analyzeCandidates, classifyIntent, normalizeKeyword, type Candidate } from './candidates'
 import type { Idea } from './models'
 import type { HubRequest, HubResult, HubSeries } from '../providers/hub-types'
@@ -14,6 +21,9 @@ export interface DiscoveryCandidate {
   reasons: string[]
 }
 export interface DiscoveryAnalysis {
+  keyword?: string
+  states?: Partial<Record<AnalysisApi, ApiAssessment>>
+  review?: EditorialReview
   results: HubResult[]
   volume: SearchAdRow | null
   volumeAt: string | null
@@ -170,80 +180,139 @@ export async function analyzeDiscovery(
   searchad: (keyword: string) => Promise<SearchAdResponse>,
   period: Pick<HubRequest, 'startDate' | 'endDate' | 'device'>,
   category = '',
+  options: { previous?: DiscoveryAnalysis; onProgress?: (value: DiscoveryAnalysis) => void } = {},
 ): Promise<DiscoveryAnalysis> {
+  const previous = options.previous?.keyword === keyword ? options.previous : undefined
   const result: DiscoveryAnalysis = {
-    results: [],
-    volume: null,
-    volumeAt: null,
-    related: [],
+    keyword,
+    results:
+      previous?.results.filter(
+        (r) =>
+          r.query === keyword &&
+          (!['trend', 'shopping'].includes(r.api) ||
+            (r.startDate === period.startDate &&
+              r.endDate === period.endDate &&
+              r.device === (period.device ?? 'all'))),
+      ) ?? [],
+    volume: previous?.volume ?? null,
+    volumeAt: previous?.volumeAt ?? null,
+    related: previous?.related ?? [],
     errors: [],
+    review: previous?.review,
+    states: Object.fromEntries(
+      ['searchad', 'blog', 'cafe', 'trend', ...(category ? ['shopping'] : [])].map((api) => [
+        api,
+        { state: '미조회', at: null, message: '조회 대기' },
+      ]),
+    ),
   }
-  try {
-    const response = await searchad(keyword)
-    result.volume =
-      response.rows.find((r) => normalizeKeyword(r.keyword) === normalizeKeyword(keyword)) ?? null
-    result.volumeAt = response.volume.collectedAt
-    result.related = response.rows
-      .filter((r) => normalizeKeyword(r.keyword) !== normalizeKeyword(keyword))
-      .slice(0, 10)
-      .map((r) => r.keyword)
-    if (!result.volume) result.errors.push('검색광고 응답에 선택 키워드의 정확한 검색량 없음')
-  } catch (e) {
-    result.errors.push(`검색량: ${(e as Error).message}`)
-  }
-  for (const api of [
-    'blog',
-    'cafe',
-    'trend',
-    ...(category ? ['shopping' as const] : []),
-  ] as const) {
+  const report = () => options.onProgress?.(structuredClone(result))
+  report()
+  const volume = async () => {
     try {
-      result.results.push(
-        await query({
-          api,
-          query: keyword,
-          ...period,
-          ...(api === 'shopping' ? { category } : {}),
-        }),
-      )
+      const response = await searchad(keyword)
+      result.volume =
+        response.rows.find((r) => normalizeKeyword(r.keyword) === normalizeKeyword(keyword)) ?? null
+      result.volumeAt = response.volume.collectedAt
+      result.related = response.rows
+        .filter((r) => normalizeKeyword(r.keyword) !== normalizeKeyword(keyword))
+        .slice(0, 10)
+        .map((r) => r.keyword)
+      const missing = !result.volume
+        ? '응답에 핵심 키워드의 정확한 검색량 없음; 연관어 검색량을 대신 쓰지 않습니다.'
+        : typeof result.volume.total !== 'number'
+          ? 'PC/모바일 중 미제공 또는 <10 값이 있어 정확한 합계 산정 불가'
+          : ''
+      result.states!.searchad = {
+        state: missing ? '자료 부족' : response.cached ? '캐시' : 'LIVE 확인',
+        cached: response.cached,
+        at: result.volumeAt,
+        message: missing || '최근 30일 PC+모바일 검색량',
+      }
+      if (missing) result.errors.push(`검색량: ${missing}`)
     } catch (e) {
-      result.errors.push(`${api}: ${(e as Error).message}`)
+      const message = (e as Error).message
+      result.errors.push(`검색량: ${message}`)
+      result.states!.searchad = {
+        state: '조회 실패',
+        at: result.volumeAt,
+        message,
+        retained: !!result.volume,
+      }
     }
+    report()
   }
+  const hub = async (api: 'blog' | 'cafe' | 'trend' | 'shopping') => {
+    try {
+      const r = await query({
+        api,
+        query: keyword,
+        ...period,
+        ...(api === 'shopping' ? { category } : {}),
+      })
+      result.results = [...result.results.filter((old) => old.api !== api), r]
+      const t = api === 'trend' ? trendAssessment(r.series[0], r.endDate) : null
+      const missing =
+        t && !t.comparable
+          ? t.message
+          : api === 'shopping' && !r.series.some((s) => s.points.length)
+            ? '기간 내 지표 없음'
+            : ''
+      result.states![api] = {
+        state: missing ? '자료 부족' : r.cached ? '캐시' : 'LIVE 확인',
+        cached: r.cached,
+        at: r.collectedAt,
+        message:
+          missing ||
+          (r.unit === 'api-results'
+            ? '해당 API 결과 수·상위 표본'
+            : '상대 관심도; 실제 검색량 아님'),
+      }
+    } catch (e) {
+      const message = (e as Error).message,
+        old = result.results.find((r) => r.api === api)
+      result.errors.push(`${api}: ${message}`)
+      result.states![api] = {
+        state: '조회 실패',
+        at: old?.collectedAt ?? null,
+        message,
+        retained: !!old,
+      }
+    }
+    report()
+  }
+  await Promise.allSettled([
+    volume(),
+    ...(['blog', 'cafe', 'trend', ...(category ? ['shopping'] : [])] as const).map((api) =>
+      hub(api as 'blog' | 'cafe' | 'trend' | 'shopping'),
+    ),
+  ])
+  result.results.sort(
+    (a, b) =>
+      ['blog', 'cafe', 'trend', 'shopping'].indexOf(a.api) -
+      ['blog', 'cafe', 'trend', 'shopping'].indexOf(b.api),
+  )
   return result
 }
 export function discoveryRecommendation(c: DiscoveryCandidate, a?: DiscoveryAnalysis) {
+  const evaluation = evaluatePublication(c, a)
   const blog = a?.results.find((r) => r.api === 'blog' && r.mode === c.mode)?.total
   const cafe = a?.results.find((r) => r.api === 'cafe' && r.mode === c.mode)?.total
-  const missing = [
-    '상위 콘텐츠 품질·차별화',
-    '계정별 적합성',
-    'Reviewman 내부 연결',
-    '공식 사실 근거',
-  ]
-  if (typeof a?.volume?.total !== 'number') missing.push('실제 검색량')
-  if (typeof blog !== 'number' || typeof cafe !== 'number') missing.push('블로그·카페 API 결과 수')
-  if (!a?.results.some((r) => r.api === 'trend' && r.series.some((s) => s.points.length >= 14)))
-    missing.push('검색 추이')
-  let status = '추가 조사 필요'
-  if (c.mode === 'DEMO') status = 'DEMO — 발행 판단 보류'
-  else if (c.duplicate) status = '발행 보류 — 기존 주제 중복 검토'
-  else if (
-    typeof a?.volume?.total === 'number' &&
-    typeof blog === 'number' &&
-    typeof cafe === 'number'
-  )
-    status = a.volume.total >= 3000 && blog <= 1000 ? '발행 검토 추천' : '롱테일 전환 검토'
   return {
-    status,
-    missing,
+    ...evaluation,
     reasons: [
       ...c.reasons,
+      `원본 제목: ${c.title}; 분석 키워드: ${a?.keyword ?? c.keyword}`,
       `이번 수집 내 유사 질문·기사 ${c.occurrences}건; 전체 반복 빈도 아님`,
       `API 결과 수: 블로그 ${blog ?? '미확인'} / 카페 ${cafe ?? '미확인'}; 통합검색 전체 문서 수·노출 순위 아님`,
-      `규칙 추론: ${c.intent}; 광고·제휴 ${/구매|비교/.test(c.intent) ? '관련성 검토 가능, 실제 상품·조건 확인 필요' : '적합성 미확인'}`,
-      trendDirection(a?.results.find((r) => r.api === 'trend')?.series[0]),
-      '검색량이 낮아도 보존; 상위 노출·수익 보장 없음',
+      `검색 의도 (규칙 추론): ${evaluation.intent}`,
+      `검색 추이: ${evaluation.trend.message}; 비교 기간 ${evaluation.trend.start ?? '미확인'}~${evaluation.trend.end ?? '미확인'}; 상대 지표이며 실제 검색량 아님`,
+      `초기 실험 평가 v1: ${evaluation.score ?? '종합 점수 보류'}; 확인 가중치 ${evaluation.coverage}%; 확인 항목 기여 ${evaluation.points}점; 결측값을 0으로 대체하거나 가중치를 재배분하지 않음`,
+      ...evaluation.components.map(
+        (s) =>
+          `${s.label} ${s.weight}%: ${s.value ?? '미확인'}; 출처 ${s.source}; ${s.explanation}`,
+      ),
+      'API 제목·요약만 분석; 본문 내용·실제 순위·상위 노출·수익 보장 없음',
     ],
   }
 }
@@ -252,7 +321,7 @@ export function discoveryToCandidate(c: DiscoveryCandidate, a?: DiscoveryAnalysi
   const candidate = analyzeCandidates(
     [
       {
-        keyword: c.keyword,
+        keyword: a?.keyword ?? c.keyword,
         pc: a?.volume?.pc ?? null,
         mobile: a?.volume?.mobile ?? null,
         total: a?.volume?.total ?? null,
@@ -265,20 +334,62 @@ export function discoveryToCandidate(c: DiscoveryCandidate, a?: DiscoveryAnalysi
   )[0]
   return {
     ...candidate,
+    discovery: {
+      title: c.title,
+      intent: recommendation.intent,
+      sources:
+        a?.review?.official && recommendation.officialChecked
+          ? [
+              {
+                id: 'discovery-official',
+                title: '사용자가 확인한 공식 원문',
+                url: a.review.official.url,
+                excerpt: a.review.official.note,
+                checkedDate: a.review.official.checkedAt.slice(0, 10),
+                kind: 'official',
+              },
+            ]
+          : [],
+    },
     status: '추가 검증 필요',
+    intent: classifyIntent(c.title).intent,
     reasons: [
       recommendation.status,
-      ...recommendation.reasons,
+      ...recommendation.reasons.slice(0, 8),
       `미확인: ${recommendation.missing.join(', ')}`,
-      ...c.sources.map(
-        (s) =>
-          `발굴 출처 ${s.api}: ${s.url || '분야 비교 주제 제안'}; 제공 날짜 ${s.date ?? '미제공'}; 조회 ${s.collectedAt}`,
+      ...(a?.review?.official
+        ? [
+            `사용자 공식 사실 확인: ${a.review.official.url}; ${a.review.official.note}; 확인 ${a.review.official.checkedAt}`,
+          ]
+        : []),
+      ...(a?.review?.note
+        ? [`Reviewman 적합성 사용자 확인: ${a.review.reviewman}; ${a.review.note}`]
+        : []),
+      ...Object.entries(a?.states ?? {}).map(
+        ([api, s]) =>
+          `조회 상태 ${api}: ${s.state}; ${s.at ?? '미조회'}; ${s.message}; 이전 자료 보존 ${!!s.retained}`,
       ),
+      ...recommendation.competition.outline.map((s) => `차별화 구성 후보 (로컬 추론): ${s}`),
+      ...c.sources
+        .slice(0, 5)
+        .map(
+          (s) =>
+            `발굴 출처 ${s.api}: ${s.url || '분야 비교 주제 제안'}; 제공 날짜 ${s.date ?? '미제공'}; 조회 ${s.collectedAt}`,
+        ),
       ...(a?.results ?? []).map(
         (r) =>
           `상세 분석 ${r.api} (${r.mode}): ${r.query}; 조회 ${r.collectedAt}; ${r.startDate ?? '기간 제한 없음'}~${r.endDate ?? ''}; 기기 ${r.device}; ${r.unit}`,
       ),
+      ...(a?.results ?? []).flatMap((r) =>
+        r.items
+          .slice(0, 3)
+          .map(
+            (i) =>
+              `상위 API 출처 ${r.api}: ${i.title}; ${i.url}; 제공일 ${i.date ?? '미제공'}; 조회 ${r.collectedAt}`,
+          ),
+      ),
       ...(a?.related.length ? [`검색광고 관련 키워드: ${a.related.join(', ')}`] : []),
+      ...recommendation.reasons.slice(8),
     ],
   }
 }

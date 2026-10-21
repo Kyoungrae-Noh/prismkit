@@ -98,11 +98,13 @@ it('measured demand plus limited API counts supports review only, duplicates def
     errors: [],
     related: [],
   }
-  expect(discoveryRecommendation(c, a).status).toBe('발행 검토 추천')
+  expect(discoveryRecommendation(c, a).status).toBe('추가 조사 필요')
+  expect(discoveryRecommendation(c, a).missing).toContain('시의성·트렌드')
+  expect(discoveryRecommendation(c, a).score).toBeNull()
   expect(discoveryRecommendation({ ...c, duplicate: true }, a).status).toContain('보류')
-  expect(discoveryRecommendation(c, { ...a, volume: { ...a.volume, total: 1 } }).status).toContain(
-    '롱테일',
-  )
+  expect(
+    discoveryRecommendation(c, { ...a, volume: { ...a.volume, total: 1 } }).components[0].value,
+  ).toBe(25)
   expect(discoveryToCandidate(c).total).toBeNull()
 })
 it('shopping produces category-based hypotheses, not invented trending products or sales', async () => {
